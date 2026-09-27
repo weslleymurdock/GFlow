@@ -3,7 +3,7 @@
 @using GFlow.Application.RepositoryWorkflow
 @using GFlow.GitHub.Authentication
 @using GFlow.GitHub.Contracts
-@inject IRepositoryWorkflowService RepositoryWorkflows
+@inject GFlow.Application.RepositoryWorkflow.IRepositoryWorkflowService RepositoryWorkflows
 
 <PageTitle>GitHub Workflows</PageTitle>
 
@@ -113,7 +113,7 @@ else
     private IReadOnlyList<GitHubFileInfo> _workflowFiles = [];
     private GitHubRepositoryInfo? _selectedRepository;
     private GitHubBranchInfo? _selectedBranch;
-    private WorkflowDocumentState? _document;
+    private GFlow.Application.RepositoryWorkflow.WorkflowDocumentState? _document;
     private string? _error;
     private string _newRepositoryName = string.Empty;
     private bool _newRepositoryPrivate;
