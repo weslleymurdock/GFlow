@@ -209,9 +209,9 @@ File updates preserve GitHub blob SHA semantics for optimistic concurrency. Asyn
 
 ## Authentication boundary
 
-Stage 03 only requires an authenticated Kiota `IRequestAdapter` to be supplied to the generated `GitHubClient`.
+Stage 03 owns the GitHub REST boundary and only requires an authenticated Kiota `IRequestAdapter` to be supplied to the generated `GitHubClient`.
 
-GFlow exposes the adapter boundary and DI registration but does not persist credentials, implement PAT account management, or provide authentication UI. Authentication and secure credential storage belong to Stage 04.
+Stage 03 does not persist credentials or implement PAT account management. Authentication and secure credential storage belong to Stage 04.
 
 ## Error handling
 
@@ -264,17 +264,23 @@ Requirements must be verified against the specific GitHub REST endpoints used by
 
 ## Security
 
-Never store PATs in plain JSON, ordinary preferences, workflow documents, logs, analytics, or source-controlled files.
+Stage 04 owns the authentication/session abstraction and platform secure credential storage. PATs are never ordinary workflow or project data.
 
-Use platform secure storage/keychain/credential facilities behind an application abstraction.
+Never store PATs in JSON files, ordinary preferences, ordinary application data, workflow documents, logs, analytics, or source-controlled files. The raw token remains behind the secure credential abstraction and Kiota authentication provider.
+
+Classic PATs and fine-grained PATs are distinct permission models. Classic tokens use OAuth-style scopes; fine-grained tokens use repository/account permissions and read/write access. GFlow models required capabilities explicitly rather than treating fine-grained permissions as OAuth scopes.
+
+Stage 03 continues to own all GitHub REST operations and error mapping. Stage 04 supplies the authenticated Kiota adapter and validates authentication/permission state for those capabilities.
 
 ## Exit Criteria
 
-A user can authenticate, required permissions are validated, and the credential is stored only through secure platform storage.
+A user can authenticate, the authenticated GitHub user can be resolved, required capabilities are explicitly modeled and validated, the credential is stored only through platform secure storage, and the raw PAT is never exposed through ordinary workflow/project models.
 
 ---
 
 # Stage 05 — Repository and Workflow Management
+
+Stage 05 consumes the authenticated GitHub services provided by Stage 03. It owns repository/workflow management and UI, not credential storage or the GitHub REST implementation.
 
 ## Objective
 

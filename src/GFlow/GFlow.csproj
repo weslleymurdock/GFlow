@@ -66,6 +66,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\GFlow.Core\GFlow.Core.csproj" />
+      <ProjectReference Include="..\GFlow.GitHub\GFlow.GitHub.csproj" />
     </ItemGroup>
 
 </Project>

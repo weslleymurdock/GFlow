@@ -1,4 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using GFlow.GitHub;
+using GFlow.GitHub.Authentication;
+using GFlow.Infrastructure.Security;
+using Microsoft.Extensions.Logging;
+using Microsoft.Maui.Storage;
 using MudBlazor.Services;
 namespace GFlow;
 
@@ -15,6 +19,9 @@ public static class MauiProgram
 			});
 		builder.Services.AddMauiBlazorWebView();
 		builder.Services.AddMudServices();
+		builder.Services.AddSingleton<ISecureStorage>(SecureStorage.Default);
+		builder.Services.AddSingleton<ISecureCredentialStore, MauiSecureCredentialStore>();
+		builder.Services.AddGFlowGitHubAuthenticated();
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();
