@@ -14,7 +14,7 @@ public enum YamlScalarKind
 public sealed class YamlScalar : YamlValue
 {
     /// <summary>The canonical null scalar.</summary>
-    public static YamlScalar Null { get; } = new(YamlScalarKind.Null, null);
+    public static new YamlScalar Null { get; } = new(YamlScalarKind.Null, null);
 
     /// <summary>Creates a string scalar.</summary>
     public YamlScalar(string value) : this(YamlScalarKind.String, value ?? throw new ArgumentNullException(nameof(value))) { }

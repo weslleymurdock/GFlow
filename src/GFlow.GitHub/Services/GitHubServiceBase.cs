@@ -3,9 +3,9 @@ using Microsoft.Kiota.Abstractions;
 
 namespace GFlow.GitHub.Services;
 
-internal abstract class GitHubServiceBase
+public abstract class GitHubServiceBase
 {
-    protected static GitHubServiceException MapException(Exception exception)
+    public static GitHubServiceException MapException(Exception exception)
     {
         if (exception is OperationCanceledException)
             return new GitHubServiceException(GitHubErrorCategory.Cancellation, "The GitHub operation was cancelled.", null, exception);
@@ -35,7 +35,7 @@ internal abstract class GitHubServiceBase
         return new GitHubServiceException(GitHubErrorCategory.Unknown, "The GitHub operation failed.", null, exception);
     }
 
-    protected static async Task<T> ExecuteAsync<T>(Func<Task<T>> operation)
+    public static async Task<T> ExecuteAsync<T>(Func<Task<T>> operation)
     {
         try
         {
@@ -51,7 +51,7 @@ internal abstract class GitHubServiceBase
         }
     }
 
-    protected static async Task ExecuteAsync(Func<Task> operation)
+    public static async Task ExecuteAsync(Func<Task> operation)
     {
         try
         {

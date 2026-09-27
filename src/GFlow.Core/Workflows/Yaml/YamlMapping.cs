@@ -62,5 +62,11 @@ public sealed class YamlMapping : YamlValue, IReadOnlyDictionary<string, YamlVal
         decimal number => new YamlScalar(number),
         _ => throw new ArgumentException($"Unsupported YAML scalar type: {value.GetType().FullName}.", nameof(value))
     };
+
+    public bool ContainsKey(string key)
+    {
+        return _values.ContainsKey(key);
+    }
+
 }
 
