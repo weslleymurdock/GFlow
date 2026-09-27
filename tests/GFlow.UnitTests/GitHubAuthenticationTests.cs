@@ -13,9 +13,9 @@ public sealed class GitHubAuthenticationTests
         var store = new FakeSecureCredentialStore();
         var credential = GitHubCredentialSecret.Create("id", "secret-token");
 
-        await store.SaveAsync(credential);
-        Assert.Equal(credential, await store.GetActiveAsync());
-        Assert.True(await store.RemoveAsync("id"));
+        await store.SaveAsync(credential, TestContext.Current.CancellationToken);
+        Assert.Equal(credential, await store.GetActiveAsync(TestContext.Current.CancellationToken));
+        Assert.True(await store.RemoveAsync("id", TestContext.Current.CancellationToken));
         Assert.Null(await store.GetActiveAsync());
     }
 
@@ -71,7 +71,7 @@ public sealed class GitHubAuthenticationTests
         var userService = new FakeUserService(new GitHubUserInfo(42, "octocat", "Mona", "https://github.com/octocat"));
         var service = new GitHubAuthenticationService(store, userService, new GitHubPermissionValidator());
 
-        var result = await service.AuthenticateAsync("ghp_test", "test");
+        var result = await service.AuthenticateAsync("ghp_test", "test", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(GitHubAuthenticationState.Authenticated, result.State);
         Assert.Equal("octocat", result.Account?.Login);
