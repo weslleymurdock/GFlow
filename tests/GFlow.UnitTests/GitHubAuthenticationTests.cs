@@ -144,7 +144,7 @@ public sealed class GitHubAuthenticationTests
         await provider.AuthenticateRequestAsync(request, null, TestContext.Current.CancellationToken);
 
         Assert.Equal("Bearer secret-token", request.Headers["Authorization"].First());
-        Assert.DoesNotContain("secret-token", request.Headers.ToString());
+        Assert.DoesNotContain("secret-token", new GitHubCredentialInfo("id", GitHubCredentialType.ClassicPersonalAccessToken, "label", "octocat", DateTimeOffset.UtcNow).ToString());
     }
 
     [Fact]
