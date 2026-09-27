@@ -4,7 +4,11 @@ namespace GFlow.GitHub.Contracts;
 public sealed record GitHubUserInfo(long? Id, string? Login, string? Name, string? HtmlUrl);
 
 /// <summary>Represents the repository information required by GFlow.</summary>
-public sealed record GitHubRepositoryInfo(long? Id, string? Name, string? FullName, bool? IsPrivate, string? DefaultBranch, string? HtmlUrl);
+public sealed record GitHubRepositoryInfo(long? Id, string? Name, string? FullName, bool? IsPrivate, string? DefaultBranch, string? HtmlUrl)
+{
+    /// <summary>Gets the repository owner derived from the GitHub full name.</summary>
+    public string? Owner => FullName?.IndexOf('/') is > 0 and var separator ? FullName[..separator] : null;
+}
 
 /// <summary>Represents a Git reference exposed by GFlow.</summary>
 public sealed record GitHubBranchInfo(string Name, string? Sha);
