@@ -16,7 +16,7 @@ public sealed class GitHubAuthenticationTests
         await store.SaveAsync(credential, TestContext.Current.CancellationToken);
         Assert.Equal(credential, await store.GetActiveAsync(TestContext.Current.CancellationToken));
         Assert.True(await store.RemoveAsync("id", TestContext.Current.CancellationToken));
-        Assert.Null(await store.GetActiveAsync());
+        Assert.Null(await store.GetActiveAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
