@@ -9,11 +9,10 @@ namespace GFlow.GitHub;
 /// <summary>Registers GFlow GitHub infrastructure backed by the generated Kiota client.</summary>
 public static class GitHubServiceCollectionExtensions
 {
-    /// <summary>Registers the generated GitHub client and GFlow-facing GitHub services.</summary>
+    /// <summary>Registers the generated GitHub client and GFlow-facing GitHub services with an existing adapter.</summary>
     public static IServiceCollection AddGFlowGitHub(this IServiceCollection services, IRequestAdapter requestAdapter)
     {
         ArgumentNullException.ThrowIfNull(requestAdapter);
-
         services.AddSingleton<IGitHubRequestAdapter>(_ => new GitHubRequestAdapter(requestAdapter));
         services.AddSingleton(requestAdapter);
         services.AddSingleton(sp => new GitHubClient(sp.GetRequiredService<IRequestAdapter>()));
@@ -26,12 +25,13 @@ public static class GitHubServiceCollectionExtensions
         return services;
     }
 
-    /// <summary>Registers GFlow GitHub authentication and secure credential services.</summary>
+    /// <summary>Registers GitHub authentication and secure credential services.</summary>
     public static IServiceCollection AddGFlowGitHubAuthentication(this IServiceCollection services)
     {
         services.AddSingleton<ISecureCredentialStore, GFlow.Infrastructure.Security.MauiSecureCredentialStore>();
-        services.AddSingleton<IGitHubCredentialProvider, GitHubAuthenticationService>();
-        services.AddSingleton<IGitHubAuthenticationService, GitHubAuthenticationService>();
+        services.AddSingleton<GitHubAuthenticationService>();
+        services.AddSingleton<IGitHubCredentialProvider>(sp => sp.GetRequiredService<GitHubAuthenticationService>());
+        services.AddSingleton<IGitHubAuthenticationService>(sp => sp.GetRequiredService<GitHubAuthenticationService>());
         services.AddSingleton<IGitHubPermissionValidator, GitHubPermissionValidator>();
         services.AddSingleton<GitHubPatAuthenticationProvider>();
         services.AddSingleton<IAuthenticationProvider>(sp => sp.GetRequiredService<GitHubPatAuthenticationProvider>());
