@@ -19,9 +19,13 @@ public static class GitHubPermissionRequirements
     public static GitHubPermissionRequirement RepositoryContentsWrite { get; } =
         new("repository-contents-write", "repo", "contents", GitHubPermissionAccess.Write);
 
+    /// <summary>Modifies workflow files under .github/workflows.</summary>
+    public static GitHubPermissionRequirement WorkflowFilesWrite { get; } =
+        new("workflow-files-write", "workflow", "workflows", GitHubPermissionAccess.Write);
+
     /// <summary>Creates a repository for the authenticated account.</summary>
     public static GitHubPermissionRequirement RepositoryCreation { get; } =
-        new("repository-creation", "repo", "administration/repository-creation", GitHubPermissionAccess.Write);
+        new("repository-creation", "repo", "repository-creation", GitHubPermissionAccess.Write);
 
     /// <summary>Reads GitHub Actions workflow and run information.</summary>
     public static GitHubPermissionRequirement ActionsRead { get; } =
@@ -38,6 +42,7 @@ public static class GitHubPermissionRequirements
         RepositoryMetadataRead,
         RepositoryContentsRead,
         RepositoryContentsWrite,
+        WorkflowFilesWrite,
         RepositoryCreation,
         ActionsRead,
         ActionsWrite
