@@ -1,3 +1,5 @@
+using GFlow.Core.Workflows.Yaml;
+using GFlow.Yaml;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace GFlow.Application.RepositoryWorkflow;
@@ -10,6 +12,8 @@ public static class RepositoryWorkflowServiceCollectionExtensions
     {
         services.AddScoped<RepositoryWorkflowContext>();
         services.AddScoped<IRepositoryWorkflowService, RepositoryWorkflowService>();
+        services.AddSingleton<IWorkflowYamlParser, WorkflowYamlConverter>();
+        services.AddSingleton<IWorkflowYamlSerializer, WorkflowYamlConverter>();
         return services;
     }
 }
