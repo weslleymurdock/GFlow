@@ -41,7 +41,7 @@ public sealed class GitHubWorkflowRunService(GitHubClient client) : GitHubServic
             config.QueryParameters.Branch = branch;
             config.QueryParameters.StatusAsGetStatusQueryParameterType = status is null
                 ? null
-                : Enum.TryParse<global::GFlow.GitHub.Repos.Item.Item.Actions.Runs.RunsRequestBuilder.GetStatusQueryParameterType>(status, true, out var parsedStatus)
+                : Enum.TryParse<global::GFlow.GitHub.Repos.Item.Item.Actions.Runs.GetStatusQueryParameterType>(status, true, out var parsedStatus)
                     ? parsedStatus
                     : null;
         }, cancellationToken));
