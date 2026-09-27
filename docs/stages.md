@@ -151,33 +151,79 @@ Representative real-world workflows can be loaded, edited in memory, and seriali
 
 ---
 
-# Stage 03 — Application Contracts and GitHub REST Infrastructure
+# Stage 03 — Application Contracts and GitHub REST Integration
 
 ## Objective
 
-Create application abstractions for GitHub operations.
+Build the GFlow-facing GitHub contracts, adapters, and services on top of the Kiota-generated GitHub REST client already present in `GFlow.GitHub`.
 
-Support:
+The REST boundary is generated from the GitHub OpenAPI description:
 
-- authenticated user information;
-- repository listing;
-- repository creation;
+```text
+GitHub OpenAPI
+      ↓
+Kiota
+      ↓
+GFlow.GitHub generated client
+      ↓
+GFlow GitHub services/adapters
+      ↓
+Application-facing contracts
+```
+
+Kiota owns the complete GitHub REST request builders and generated request/response models. GFlow must not recreate that infrastructure with handwritten HTTP clients, endpoint DTOs, or duplicated request bodies.
+
+The local Kiota tool is defined by `dotnet-tools.json`. The authoritative generated-client regeneration script is:
+
+```powershell
+dotnet tool restore
+.\scripts\generate-gflow-github.ps1
+```
+
+Generated files under `src/GFlow.GitHub` must not be hand-edited. Changes to the GitHub OpenAPI surface are made by updating the source description and regenerating the client.
+
+## Application-facing services
+
+Group operations by GitHub capability rather than by individual endpoint. Stage 03 provides focused services such as:
+
+- `IGitHubUserService`;
+- `IGitHubRepositoryService`;
+- `IGitHubBranchService`;
+- `IGitHubFileService`;
+- `IGitHubWorkflowService`;
+- `IGitHubWorkflowRunService`.
+
+The services expose application-oriented contracts and map the generated Kiota models at the boundary. Required capabilities include:
+
+- authenticated user;
+- repository listing, lookup, and creation;
 - branch/ref discovery;
-- file retrieval;
-- file creation;
-- file updates;
-- workflow discovery;
+- workflow file retrieval;
+- workflow file creation/update;
+- workflow discovery under `.github/workflows`;
 - workflow dispatch;
-- workflow run status;
-- cancellation where supported.
+- workflow run retrieval and status/conclusion;
+- workflow run cancellation.
 
-Use GitHub REST directly rather than requiring GitHub CLI.
+File updates preserve GitHub blob SHA semantics for optimistic concurrency. Asynchronous operations propagate cancellation tokens, and paginated GitHub operations expose page controls.
 
-Repository creation and repository/file/workflow operations must have explicit contracts and error handling.
+## Authentication boundary
+
+Stage 03 only requires an authenticated Kiota `IRequestAdapter` to be supplied to the generated `GitHubClient`.
+
+GFlow exposes the adapter boundary and DI registration but does not persist credentials, implement PAT account management, or provide authentication UI. Authentication and secure credential storage belong to Stage 04.
+
+## Error handling
+
+GitHub/Kiota failures are mapped at the service boundary into a small application-facing error abstraction covering authentication, authorization, not found, conflict, validation, rate limit, server, cancellation, and unknown failures. The original HTTP status is retained when available.
+
+## Testing
+
+Service tests use local HTTP/Kiota infrastructure and do not require a GitHub token or live repository. They verify mapping, file SHA update semantics, workflow discovery and dispatch request construction, run status/conclusion mapping, cancellation, and representative error mapping.
 
 ## Exit Criteria
 
-The application layer can express all GitHub operations required by the product while the core remains GitHub-independent.
+The application layer can express all Stage 03 GitHub operations through GFlow services while the core remains independent from GitHub and Kiota. The generated Kiota client is the sole REST implementation, authentication storage remains deferred to Stage 04, and the service/adaptor tests pass without live GitHub credentials.
 
 ---
 
