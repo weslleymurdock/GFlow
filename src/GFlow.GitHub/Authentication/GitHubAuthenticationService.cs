@@ -100,6 +100,13 @@ public sealed class GitHubAuthenticationService(
     public GitHubAuthenticationResult GetCurrentState() => _state;
 
     /// <inheritdoc />
+    public IReadOnlyList<GitHubPermissionResult> ValidatePermissions(
+        GitHubCredentialType credentialType,
+        IReadOnlySet<string> grantedPermissions,
+        IEnumerable<GitHubPermissionRequirement> requirements) =>
+        permissionValidator.Validate(credentialType, grantedPermissions, requirements);
+
+    /// <inheritdoc />
     public async Task SignOutAsync(CancellationToken cancellationToken = default)
     {
         var active = await credentialStore.GetActiveAsync(cancellationToken).ConfigureAwait(false);
