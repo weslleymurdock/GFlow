@@ -183,20 +183,6 @@ public sealed class RepositoryWorkflowServiceTests
     }
 
     [Fact]
-    public async Task WorkflowRoundTripUsesStage02Contracts()
-    {
-        var fakes = Create();
-        var workflow = new Workflow("roundtrip");
-        workflow.Triggers.Add(new GFlow.Core.Workflows.Trigger("push"));
-        workflow.AddJob(new Job("build") { RunsOn = new GFlow.Core.Workflows.Yaml.YamlScalar("ubuntu-latest") });
-        var yaml = fakes.Serializer.Serialize(workflow);
-        var parsed = fakes.Parser.Parse(yaml);
-        Assert.Equal("roundtrip", parsed.Name);
-        Assert.Single(parsed.Jobs);
-    }
-
-
-    [Fact]
     public void Stage02ConverterPerformsWorkflowYamlRoundTrip()
     {
         var converter = new WorkflowYamlConverter();
