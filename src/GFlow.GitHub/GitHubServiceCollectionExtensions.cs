@@ -36,6 +36,7 @@ public static class GitHubServiceCollectionExtensions
         services.AddSingleton<IGitHubCredentialProvider>(sp => sp.GetRequiredService<GitHubSecureCredentialProvider>());
         services.AddScoped<IGitHubAuthenticationService, GitHubAuthenticationService>();
         services.AddSingleton<IGitHubPermissionValidator, GitHubPermissionValidator>();
+        services.AddScoped<IGitHubEffectivePermissionValidator, GitHubEffectivePermissionValidator>();
         services.AddSingleton<GitHubPatAuthenticationProvider>();
         services.AddSingleton<IAuthenticationProvider>(sp => sp.GetRequiredService<GitHubPatAuthenticationProvider>());
         services.AddSingleton<IGitHubRequestAdapterFactory, GitHubRequestAdapterFactory>();
