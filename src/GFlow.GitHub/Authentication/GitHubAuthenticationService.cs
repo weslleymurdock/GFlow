@@ -7,7 +7,6 @@ namespace GFlow.GitHub.Authentication;
 public sealed class GitHubAuthenticationService(
     ISecureCredentialStore credentialStore,
     IGitHubUserService userService,
-    IGitHubPermissionValidator permissionValidator,
     IGitHubEffectivePermissionValidator effectivePermissionValidator) : IGitHubAuthenticationService
 {
     private GitHubAuthenticationResult _state =
