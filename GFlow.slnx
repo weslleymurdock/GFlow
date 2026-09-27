@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GFlow.Core/GFlow.Core.csproj" />
+    <Project Path="src/GFlow/GFlow.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GFlow.UnitTests/GFlow.UnitTests.csproj" />
+  </Folder>
+</Solution>
