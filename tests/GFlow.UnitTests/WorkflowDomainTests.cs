@@ -117,8 +117,8 @@ public sealed class WorkflowDomainTests
         bar.Set("items", values);
         root.Set("bar", bar);
 
-        var result = (YamlMapping)((YamlMapping)root["bar"])["items"];
-        var item = (YamlMapping)((YamlSequence)result)[0];
+        var result = (YamlSequence)((YamlMapping)root["bar"])["items"];
+        var item = (YamlMapping)result[0];
 
         Assert.True(((YamlScalar)item["enabled"]).GetValue<bool>());
         Assert.Equal("two", ((YamlScalar)((YamlSequence)item["values"])[1]).GetValue<string>());
