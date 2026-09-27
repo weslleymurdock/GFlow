@@ -226,7 +226,7 @@ public sealed class GitHubServicesTests
         new GitHubFileService(CreateClient(handler));
 
     private static IGitHubWorkflowService CreateWorkflowService(StubHandler handler) =>
-        new GitHubWorkflowService(CreateClient(handler), CreateFileService(handler));
+        new GitHubWorkflowService(CreateClient(handler));
 
     private static IGitHubWorkflowRunService CreateRunService(StubHandler handler) =>
         new GitHubWorkflowRunService(CreateClient(handler));
