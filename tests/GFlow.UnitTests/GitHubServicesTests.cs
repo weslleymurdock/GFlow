@@ -27,7 +27,7 @@ public sealed class GitHubServicesTests
 
         var service = CreateRepositoryService(handler);
 
-        var repository = await service.GetAsync("weslleymurdock", "gflow");
+        var repository = await service.GetAsync("weslleymurdock", "gflow", TestContext.Current.CancellationToken);
 
         Assert.Equal(42, repository.Id);
         Assert.Equal("gflow", repository.Name);
@@ -71,7 +71,7 @@ public sealed class GitHubServicesTests
         });
 
         var service = CreateFileService(handler);
-        var current = await service.GetAsync("weslleymurdock", "gflow", ".github/workflows/build.yml", "main");
+        var current = await service.GetAsync("weslleymurdock", "gflow", ".github/workflows/build.yml", "main", TestContext.Current.CancellationToken);
 
         await service.WriteAsync(
             "weslleymurdock",
@@ -81,7 +81,8 @@ public sealed class GitHubServicesTests
                 "name: build\n",
                 "Update workflow",
                 "main",
-                current.Sha));
+                current.Sha,
+                TestContext.Current.CancellationToken));
 
         Assert.Equal("old-sha", current.Sha);
         Assert.NotNull(handler.LastRequestBody);
@@ -121,7 +122,7 @@ public sealed class GitHubServicesTests
 
         var service = CreateWorkflowService(handler);
 
-        var files = await service.DiscoverFilesAsync("weslleymurdock", "gflow", "main");
+        var files = await service.DiscoverFilesAsync("weslleymurdock", "gflow", "main", TestContext.Current.CancellationToken);
 
         Assert.Equal(2, files.Count);
         Assert.Contains(files, file => file.Path.EndsWith("build.yml"));
@@ -150,7 +151,8 @@ public sealed class GitHubServicesTests
             new GitHubWorkflowDispatchRequest(
                 "build.yml",
                 "feature/test",
-                new Dictionary<string, string> { ["configuration"] = "Release" }));
+                new Dictionary<string, string> { ["configuration"] = "Release" }),
+            TestContext.Current.CancellationToken);
 
         Assert.Equal(123, run?.Id);
         Assert.NotNull(handler.LastRequestBody);
@@ -177,7 +179,7 @@ public sealed class GitHubServicesTests
             """));
 
         var service = CreateRunService(handler);
-        var run = await service.GetAsync("example", "repo", 123);
+        var run = await service.GetAsync("example", "repo", 123, TestContext.Current.CancellationToken);
 
         Assert.Equal("completed", run.Status);
         Assert.Equal("success", run.Conclusion);
@@ -192,7 +194,7 @@ public sealed class GitHubServicesTests
             new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{}", Encoding.UTF8, "application/json") });
 
         var service = CreateRunService(handler);
-        await service.CancelAsync("example", "repo", 123);
+        await service.CancelAsync("example", "repo", 123, TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpMethod.Post, handler.LastRequest?.Method);
         Assert.EndsWith("/repos/example/repo/actions/runs/123/cancel", handler.LastRequest?.RequestUri?.AbsolutePath);
@@ -210,7 +212,7 @@ public sealed class GitHubServicesTests
         var service = CreateRepositoryService(handler);
 
         var exception = await Assert.ThrowsAsync<GitHubServiceException>(
-            () => service.GetAsync("example", "repo"));
+            () => service.GetAsync("example", "repo", TestContext.Current.CancellationToken));
 
         Assert.Equal(GitHubErrorCategory.Authentication, exception.Category);
         Assert.Equal(401, exception.StatusCode);
