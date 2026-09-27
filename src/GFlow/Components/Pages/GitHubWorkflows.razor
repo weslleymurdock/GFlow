@@ -1,0 +1,210 @@
+@page "/github"
+
+@using GFlow.Application.RepositoryWorkflow
+@using GFlow.GitHub.Authentication
+@using GFlow.GitHub.Contracts
+@inject IRepositoryWorkflowService RepositoryWorkflows
+
+<PageTitle>GitHub Workflows</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">GitHub Workflows</MudText>
+
+@if (_authentication is null)
+{
+    <MudProgressCircular Indeterminate="true" />
+}
+else if (_authentication.State != GitHubAuthenticationState.Authenticated)
+{
+    <MudAlert Severity="Severity.Warning">
+        GitHub authentication is required before repository management can be used.
+        Current state: @_authentication.State.
+    </MudAlert>
+}
+else
+{
+    <MudStack Spacing="3">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6">Account</MudText>
+            <MudText>@_authentication.Account?.Login</MudText>
+        </MudPaper>
+
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6">Repositories</MudText>
+            <MudStack Row="true" Spacing="2" Class="my-3">
+                <MudTextField @bind-Value="_newRepositoryName" Label="New repository" Variant="Variant.Outlined" />
+                <MudCheckBox @bind-Value="_newRepositoryPrivate" Label="Private" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@string.IsNullOrWhiteSpace(_newRepositoryName)" OnClick="CreateRepositoryAsync">
+                    Create
+                </MudButton>
+            </MudStack>
+            <MudSelect T="GitHubRepositoryInfo" Value="_selectedRepository" ValueChanged="SelectRepositoryAsync" Label="Repository" Variant="Variant.Outlined">
+                @foreach (var repository in _repositories)
+                {
+                    <MudSelectItem Value="repository">@repository.FullName</MudSelectItem>
+                }
+            </MudSelect>
+        </MudPaper>
+
+        @if (_selectedRepository is not null)
+        {
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6">Branch</MudText>
+                <MudSelect T="GitHubBranchInfo" Value="_selectedBranch" ValueChanged="SelectBranchAsync" Label="Branch" Variant="Variant.Outlined">
+                    @foreach (var branch in _branches)
+                    {
+                        <MudSelectItem Value="branch">@branch.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudPaper>
+        }
+
+        @if (_selectedBranch is not null)
+        {
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6">Workflows</MudText>
+                <MudStack Row="true" Spacing="2" Class="my-3">
+                    <MudTextField @bind-Value="_newWorkflowName" Label="New workflow name" Variant="Variant.Outlined" />
+                    <MudButton Variant="Variant.Outlined" OnClick="CreateWorkflow" Disabled="@string.IsNullOrWhiteSpace(_newWorkflowName)">
+                        New workflow
+                    </MudButton>
+                </MudStack>
+                @if (_workflowFiles.Count == 0)
+                {
+                    <MudText>No workflow files were found under .github/workflows.</MudText>
+                }
+                else
+                {
+                    <MudList T="GitHubFileInfo">
+                        @foreach (var file in _workflowFiles)
+                        {
+                            <MudListItem OnClick="() => LoadWorkflowAsync(file.Path)">
+                                @file.Path
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </MudPaper>
+        }
+
+        @if (_document is not null)
+        {
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6">Workflow</MudText>
+                <MudText>@_document.Path</MudText>
+                <MudText Typo="Typo.body2">Branch: @_document.Branch | Blob SHA: @(_document.BlobSha ?? "new file")</MudText>
+                <MudText Typo="Typo.body2">Model: @_document.Model.Name, @_document.Model.Jobs.Count job(s)</MudText>
+                <MudButton Class="mt-3" Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveWorkflowAsync">
+                    Save workflow
+                </MudButton>
+            </MudPaper>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(_error))
+        {
+            <MudAlert Severity="Severity.Error">@_error</MudAlert>
+        }
+    </MudStack>
+}
+
+@code {
+    private GitHubAuthenticationResult? _authentication;
+    private IReadOnlyList<GitHubRepositoryInfo> _repositories = [];
+    private IReadOnlyList<GitHubBranchInfo> _branches = [];
+    private IReadOnlyList<GitHubFileInfo> _workflowFiles = [];
+    private GitHubRepositoryInfo? _selectedRepository;
+    private GitHubBranchInfo? _selectedBranch;
+    private WorkflowDocumentState? _document;
+    private string? _error;
+    private string _newRepositoryName = string.Empty;
+    private bool _newRepositoryPrivate;
+    private string _newWorkflowName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _authentication = await RepositoryWorkflows.EnsureAuthenticatedAsync();
+            if (_authentication.State == GitHubAuthenticationState.Authenticated)
+                _repositories = await RepositoryWorkflows.ListRepositoriesAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    private async Task SelectRepositoryAsync(GitHubRepositoryInfo? repository)
+    {
+        if (repository?.FullName is null) return;
+        try
+        {
+            var separator = repository.FullName.IndexOf('/');
+            if (separator <= 0) return;
+            _selectedRepository = await RepositoryWorkflows.SelectRepositoryAsync(repository.FullName[..separator], repository.FullName[(separator + 1)..]);
+            _branches = await RepositoryWorkflows.ListBranchesAsync();
+            _selectedBranch = await RepositoryWorkflows.SelectDefaultBranchAsync();
+            _workflowFiles = await RepositoryWorkflows.DiscoverWorkflowsAsync();
+            _document = null;
+            _error = null;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task CreateRepositoryAsync()
+    {
+        try
+        {
+            var repository = await RepositoryWorkflows.CreateRepositoryAsync(new GitHubRepositoryCreateRequest(_newRepositoryName, IsPrivate: _newRepositoryPrivate));
+            _repositories = await RepositoryWorkflows.ListRepositoriesAsync();
+            await SelectRepositoryAsync(repository);
+            _newRepositoryName = string.Empty;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task SelectBranchAsync(GitHubBranchInfo? branch)
+    {
+        if (branch is null) return;
+        try
+        {
+            _selectedBranch = await RepositoryWorkflows.SelectBranchAsync(branch.Name);
+            _workflowFiles = await RepositoryWorkflows.DiscoverWorkflowsAsync();
+            _document = null;
+            _error = null;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private void CreateWorkflow()
+    {
+        try
+        {
+            _document = RepositoryWorkflows.CreateWorkflow(_newWorkflowName);
+            _newWorkflowName = string.Empty;
+            _error = null;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task LoadWorkflowAsync(string path)
+    {
+        try
+        {
+            _document = await RepositoryWorkflows.LoadWorkflowAsync(path);
+            _error = null;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+
+    private async Task SaveWorkflowAsync()
+    {
+        if (_document is null) return;
+        try
+        {
+            _document = await RepositoryWorkflows.SaveWorkflowAsync(_document);
+            _workflowFiles = await RepositoryWorkflows.DiscoverWorkflowsAsync();
+            _error = null;
+        }
+        catch (Exception ex) { _error = ex.Message; }
+    }
+}
