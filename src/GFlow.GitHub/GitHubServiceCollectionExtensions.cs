@@ -31,7 +31,7 @@ public static class GitHubServiceCollectionExtensions
     public static IServiceCollection AddGFlowGitHubAuthenticated(this IServiceCollection services)
     {
         services.AddGFlowGitHubAuthentication();
-        services.AddSingleton<IRequestAdapter>(sp =>
+        services.AddSingleton(sp =>
             sp.GetRequiredService<IGitHubRequestAdapterFactory>().Create());
         services.AddSingleton<IGitHubRequestAdapter>(sp =>
             new GitHubRequestAdapter(sp.GetRequiredService<IRequestAdapter>()));

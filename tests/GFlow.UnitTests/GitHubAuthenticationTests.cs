@@ -76,7 +76,7 @@ public sealed class GitHubAuthenticationTests
         Assert.Equal(GitHubAuthenticationState.Authenticated, result.State);
         Assert.Equal("octocat", result.Account?.Login);
         Assert.Null(result.Credential?.Label is null ? null : result.Credential.GetType().GetProperty("Token"));
-        Assert.Equal("ghp_test", (await store.GetActiveAsync())?.Token);
+        Assert.Equal("ghp_test", (await store.GetActiveAsync(TestContext.Current.CancellationToken))?.Token);
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public sealed class GitHubAuthenticationTests
             new FakeUserService(null),
             new GitHubPermissionValidator());
 
-        var result = await service.ValidateAsync();
+        var result = await service.ValidateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(GitHubAuthenticationState.MissingCredential, result.State);
         Assert.Null(result.Account);
@@ -97,14 +97,14 @@ public sealed class GitHubAuthenticationTests
     public async Task InvalidCredentialTransitionsToInvalidState()
     {
         var store = new FakeSecureCredentialStore();
-        await store.SaveAsync(GitHubCredentialSecret.Create("id", "bad"));
+        await store.SaveAsync(GitHubCredentialSecret.Create("id", "bad"), TestContext.Current.CancellationToken);
         var userService = new FakeUserService(exception: new GitHubServiceException(
             GitHubErrorCategory.Authentication,
             "Authentication failed.",
             401));
 
         var service = new GitHubAuthenticationService(store, userService, new GitHubPermissionValidator());
-        var result = await service.ValidateAsync();
+        var result = await service.ValidateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(GitHubAuthenticationState.InvalidCredential, result.State);
         Assert.Null(result.Account);
@@ -117,7 +117,7 @@ public sealed class GitHubAuthenticationTests
             new FakeCredentialProvider(GitHubCredentialSecret.Create("id", "secret-token")));
 
         var request = new RequestInformation();
-        await provider.AuthenticateRequestAsync(request);
+        await provider.AuthenticateRequestAsync(request, null, TestContext.Current.CancellationToken);
 
         Assert.Equal("Bearer secret-token", request.Headers["Authorization"].First());
         Assert.DoesNotContain("secret-token", request.Headers.ToString());

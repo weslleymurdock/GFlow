@@ -11,6 +11,6 @@
     <PackageReference Include="Microsoft.Kiota.Http.HttpClientLibrary" Version="2.1.2" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..GFlow.CoreGFlow.Core.csproj" />
+    <ProjectReference Include="..\GFlow.Core\GFlow.Core.csproj" />
   </ItemGroup>
 </Project>

@@ -81,13 +81,13 @@ public sealed class GitHubServicesTests
                 "name: build\n",
                 "Update workflow",
                 "main",
-                current.Sha,
-                TestContext.Current.CancellationToken));
+                current.Sha),
+                TestContext.Current.CancellationToken);
 
         Assert.Equal("old-sha", current.Sha);
         Assert.NotNull(handler.LastRequestBody);
-        Assert.Contains("""sha"":""old-sha""", handler.LastRequestBody);
-        Assert.Contains("""branch"":""main""", handler.LastRequestBody);
+        Assert.Contains("""sha":"old-sha""", handler.LastRequestBody);
+        Assert.Contains("""branch":"main""", handler.LastRequestBody);
         Assert.Contains("bmFtZTogYnVpbGQK", handler.LastRequestBody);
     }
 
@@ -156,8 +156,8 @@ public sealed class GitHubServicesTests
 
         Assert.Equal(123, run?.Id);
         Assert.NotNull(handler.LastRequestBody);
-        Assert.Contains("""ref"":""feature/test""", handler.LastRequestBody);
-        Assert.Contains("""configuration"":""Release""", handler.LastRequestBody);
+        Assert.Contains("""ref":"feature/test""", handler.LastRequestBody);
+        Assert.Contains("""configuration":"Release""", handler.LastRequestBody);
     }
 
     [Fact]
