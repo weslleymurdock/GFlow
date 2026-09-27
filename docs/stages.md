@@ -280,36 +280,17 @@ A user can authenticate, the authenticated GitHub user can be resolved, required
 
 # Stage 05 — Repository and Workflow Management
 
-Stage 05 consumes the authenticated GitHub services provided by Stage 03. It owns repository/workflow management and UI, not credential storage or the GitHub REST implementation.
+Stage 05 consumes the authenticated GitHub services provided by Stage 03 and the authentication/session boundary provided by Stage 04. Repository/workflow state is application state and never contains credential secrets.
 
 ## Objective
 
 Implement:
 
+```text
 GitHub account -> repositories -> repository -> branch -> .github/workflows -> workflow
+```
 
-Support:
-
-- repository creation;
-- repository selection;
-- branch selection;
-- workflow creation;
-- existing workflow loading;
-- workflow editing;
-- workflow saving;
-- workflow file creation/update through REST.
-
-Handle optimistic concurrency using the current file/blob SHA where required.
-
-## Exit Criteria
-
-A user can create/select a repository and persist a valid GFlow workflow into .github/workflows/<name>.yml.
-
----
-
-# Stage 05 — Repository and Workflow Management
-
-Stage 05 consumes the authenticated GitHub services provided by Stage 03 and the authentication/session boundary provided by Stage 04. Repository/workflow state is application state and never contains credential secrets.
+Support repository creation/selection, branch selection, workflow discovery/loading/creation/saving, and the corresponding repository/workflow-management UI.
 
 ## Application boundary
 
@@ -362,6 +343,10 @@ Malformed YAML is surfaced through `WorkflowYamlException`. GitHub authenticatio
 ## UI boundary
 
 Stage 05 provides the repository, branch, and workflow-management host UI. It intentionally does not implement the visual workflow editor, recursive Action configuration editor, matrix editor, dependency graph editor, or execution experience; those belong to later stages.
+
+## Exit Criteria
+
+A user can create/select a repository and branch, discover or create a workflow under `.github/workflows/`, load it into the `Workflow` model, and save it back through the authenticated GitHub services. Existing files are updated with their current blob SHA.
 
 ---
 
