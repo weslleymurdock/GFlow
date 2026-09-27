@@ -213,14 +213,10 @@ public sealed partial class RepositoryWorkflowService(
             ? document.BlobSha
             : throw new GitHubServiceException(GitHubErrorCategory.Conflict, "An existing workflow is missing its current blob SHA.");
 
-    private static string Owner(GitHubRepositoryInfo repository)
-    {
-        var fullName = repository.FullName;
-        if (string.IsNullOrWhiteSpace(fullName))
-            throw new GitHubServiceException(GitHubErrorCategory.Validation, "The repository does not expose its full name.");
-        var separator = fullName.IndexOf('/');
-        return separator > 0 ? fullName[..separator] : throw new GitHubServiceException(GitHubErrorCategory.Validation, "The repository owner could not be resolved.");
-    }
+    private static string Owner(GitHubRepositoryInfo repository) =>
+        !string.IsNullOrWhiteSpace(repository.Owner)
+            ? repository.Owner
+            : throw new GitHubServiceException(GitHubErrorCategory.Validation, "The repository owner could not be resolved.");
 
     private static string RepositoryName(GitHubRepositoryInfo repository) =>
         !string.IsNullOrWhiteSpace(repository.Name)
