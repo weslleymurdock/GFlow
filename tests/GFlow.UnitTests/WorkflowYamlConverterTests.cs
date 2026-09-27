@@ -118,11 +118,12 @@ public sealed class WorkflowYamlConverterTests
     Assert.Equal("prepare", workflow.Jobs[1].Needs[0]);
     Assert.Equal(PermissionPolicy.ReadAll, workflow.Jobs[1].Permissions.Policy);
     Assert.Equal("${{ matrix.os }}", ((YamlScalar)workflow.Jobs[1].RunsOn!).GetValue<string>());
-    Assert.False(workflow.Jobs[1].Strategy!.FailFast);
-    Assert.Equal(2, workflow.Jobs[1].Strategy.MaxParallel);
-    Assert.Equal(2, workflow.Jobs[1].Strategy.Dimensions.Count);
-    Assert.Single(workflow.Jobs[1].Strategy.Include);
-    Assert.Single(workflow.Jobs[1].Strategy.Exclude);
+    var strategy = workflow.Jobs[1].Strategy!;
+    Assert.False(strategy.FailFast);
+    Assert.Equal(2, strategy.MaxParallel);
+    Assert.Equal(2, strategy.Dimensions.Count);
+    Assert.Single(strategy.Include);
+    Assert.Single(strategy.Exclude);
   }
 
   [Fact]
