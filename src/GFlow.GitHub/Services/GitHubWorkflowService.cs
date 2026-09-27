@@ -72,10 +72,19 @@ public sealed class GitHubWorkflowService(GitHubClient client) : GitHubServiceBa
 
         var entries = result?.WithPathGetResponseMember1 ?? [];
         var workflowFiles = entries
-            .Where(entry => string.Equals(entry.Type?.ToString(), "File", StringComparison.OrdinalIgnoreCase)
-                && (entry.Name?.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) == true
-                    || entry.Name?.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) == true))
-            .Select(entry => new GitHubFileInfo(entry.Path ?? entry.Name ?? string.Empty, string.Empty, entry.Sha ?? string.Empty, entry.HtmlUrl))
+            .Where(entry => entry.AdditionalData.TryGetValue("type", out var type)
+                && string.Equals(type?.ToString(), "file", StringComparison.OrdinalIgnoreCase)
+                && entry.AdditionalData.TryGetValue("name", out var nameValue)
+                && (nameValue?.ToString()?.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) == true
+                    || nameValue?.ToString()?.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) == true))
+            .Select(entry =>
+            {
+                var name = entry.AdditionalData.TryGetValue("name", out var n) ? n?.ToString() : null;
+                var path = entry.AdditionalData.TryGetValue("path", out var p) ? p?.ToString() : name;
+                var sha = entry.AdditionalData.TryGetValue("sha", out var s) ? s?.ToString() : string.Empty;
+                var htmlUrl = entry.AdditionalData.TryGetValue("html_url", out var h) ? h?.ToString() : null;
+                return new GitHubFileInfo(path ?? name ?? string.Empty, string.Empty, sha ?? string.Empty, htmlUrl);
+            })
             .ToArray();
 
         return workflowFiles;
