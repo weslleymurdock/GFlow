@@ -31,7 +31,7 @@ public sealed class GitHubWorkflowRunService(GitHubClient client) : GitHubServic
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(owner);
         ArgumentException.ThrowIfNullOrWhiteSpace(repository);
-        ArgumentOutOfRangeException.ThrowIfLessThan(runId: page, value: 1);
+        ArgumentOutOfRangeException.ThrowIfLessThan(page, 1);
         ArgumentOutOfRangeException.ThrowIfLessThan(perPage, 1);
 
         var result = await ExecuteAsync(() => client.Repos[owner][repository].Actions.Runs.GetAsRunsGetResponseAsync(config =>
