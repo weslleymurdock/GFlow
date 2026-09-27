@@ -233,7 +233,7 @@ public sealed partial class RepositoryWorkflowService(
         if (!WorkflowPathRegex().IsMatch(path))
             throw new GitHubServiceException(GitHubErrorCategory.Validation, "Workflow paths must be direct .yml or .yaml files under .github/workflows.");
         var filename = Path.GetFileName(path);
-        if (filename is "." or ".." || filename.Contains('\') || filename.Contains('/'))
+        if (filename is "." or ".." || filename.Contains('\\') || filename.Contains('/'))
             throw new GitHubServiceException(GitHubErrorCategory.Validation, "The workflow filename is invalid.");
     }
 
