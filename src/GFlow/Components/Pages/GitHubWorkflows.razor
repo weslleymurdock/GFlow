@@ -40,7 +40,7 @@ else
             <MudSelect T="GitHubRepositoryInfo" Value="_selectedRepository" ValueChanged="SelectRepositoryAsync" Label="Repository" Variant="Variant.Outlined">
                 @foreach (var repository in _repositories)
                 {
-                    <MudSelectItem Value="repository">@repository.FullName</MudSelectItem>
+                    <MudSelectItem Value="@repository">@repository.FullName</MudSelectItem>
                 }
             </MudSelect>
         </MudPaper>
@@ -52,7 +52,7 @@ else
                 <MudSelect T="GitHubBranchInfo" Value="_selectedBranch" ValueChanged="SelectBranchAsync" Label="Branch" Variant="Variant.Outlined">
                     @foreach (var branch in _branches)
                     {
-                        <MudSelectItem Value="branch">@branch.Name</MudSelectItem>
+                        <MudSelectItem Value="@branch">@branch.Name</MudSelectItem>
                     }
                 </MudSelect>
             </MudPaper>
