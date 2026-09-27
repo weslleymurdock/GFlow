@@ -85,8 +85,8 @@ public sealed class GitHubServicesTests
 
         Assert.Equal("old-sha", current.Sha);
         Assert.NotNull(handler.LastRequestBody);
-        Assert.Contains(""sha":"old-sha"", handler.LastRequestBody);
-        Assert.Contains(""branch":"main"", handler.LastRequestBody);
+        Assert.Contains("""sha"":""old-sha""", handler.LastRequestBody);
+        Assert.Contains("""branch"":""main""", handler.LastRequestBody);
         Assert.Contains("bmFtZTogYnVpbGQK", handler.LastRequestBody);
     }
 
@@ -154,8 +154,8 @@ public sealed class GitHubServicesTests
 
         Assert.Equal(123, run?.Id);
         Assert.NotNull(handler.LastRequestBody);
-        Assert.Contains(""ref":"feature/test"", handler.LastRequestBody);
-        Assert.Contains(""configuration":"Release"", handler.LastRequestBody);
+        Assert.Contains("""ref"":""feature/test""", handler.LastRequestBody);
+        Assert.Contains("""configuration"":""Release""", handler.LastRequestBody);
     }
 
     [Fact]
