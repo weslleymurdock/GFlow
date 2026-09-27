@@ -47,11 +47,43 @@ public enum GitHubAuthenticationState
 }
 
 /// <summary>Represents the result of validating one required GitHub capability.</summary>
+public enum GitHubPermissionVerificationStatus
+{
+    /// <summary>The GitHub API provided affirmative evidence for the capability.</summary>
+    Verified,
+
+    /// <summary>The GitHub API proved that the capability is unavailable.</summary>
+    Missing,
+
+    /// <summary>The available API evidence cannot safely prove the capability.</summary>
+    Unverified
+}
+
+/// <summary>Represents one effective permission observation obtained from GitHub.</summary>
+public sealed record GitHubPermissionObservation(
+    GitHubPermissionVerificationStatus Status,
+    string Detail)
+{
+    /// <summary>Creates verified permission evidence.</summary>
+    public static GitHubPermissionObservation Verified(string detail) =>
+        new(GitHubPermissionVerificationStatus.Verified, detail);
+
+    /// <summary>Creates missing-permission evidence.</summary>
+    public static GitHubPermissionObservation Missing(string detail) =>
+        new(GitHubPermissionVerificationStatus.Missing, detail);
+
+    /// <summary>Creates explicitly unverified evidence.</summary>
+    public static GitHubPermissionObservation Unverified(string detail) =>
+        new(GitHubPermissionVerificationStatus.Unverified, detail);
+}
+
+/// <summary>Represents the result of validating one required GitHub capability.</summary>
 public sealed record GitHubPermissionResult(
     string Capability,
     bool Satisfied,
     string? MissingPermission = null,
-    string? Detail = null);
+    string? Detail = null,
+    bool Verified = false);
 
 /// <summary>Represents the complete authentication validation result.</summary>
 public sealed record GitHubAuthenticationResult(
@@ -109,11 +141,11 @@ public interface IGitHubAuthenticationService
     /// <summary>Gets the current authentication result without performing network validation.</summary>
     GitHubAuthenticationResult GetCurrentState();
 
-    /// <summary>Validates explicit permission evidence against GFlow capability requirements.</summary>
-    IReadOnlyList<GitHubPermissionResult> ValidatePermissions(
-        GitHubCredentialType credentialType,
-        IReadOnlySet<string> grantedPermissions,
-        IEnumerable<GitHubPermissionRequirement> requirements);
+    /// <summary>Validates effective permissions using GitHub-derived API evidence.</summary>
+    Task<IReadOnlyList<GitHubPermissionResult>> ValidatePermissionsAsync(
+        string? owner = null,
+        string? repository = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Removes the active credential and clears the authentication session.</summary>
     Task SignOutAsync(CancellationToken cancellationToken = default);
@@ -151,6 +183,11 @@ public interface IGitHubPermissionValidator
         GitHubCredentialType credentialType,
         IReadOnlySet<string> grantedPermissions,
         IEnumerable<GitHubPermissionRequirement> requirements);
+
+    /// <summary>Maps effective permission observations obtained from GitHub API operations.</summary>
+    IReadOnlyList<GitHubPermissionResult> ValidateEvidence(
+        GitHubCredentialType credentialType,
+        IReadOnlyDictionary<string, GitHubPermissionObservation> observations);
 }
 
 /// <summary>Provides permission evidence captured by the GitHub API integration.</summary>

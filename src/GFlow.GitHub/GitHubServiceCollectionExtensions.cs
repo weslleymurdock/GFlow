@@ -14,47 +14,52 @@ public static class GitHubServiceCollectionExtensions
     public static IServiceCollection AddGFlowGitHub(this IServiceCollection services, IRequestAdapter requestAdapter)
     {
         ArgumentNullException.ThrowIfNull(requestAdapter);
-
-        services.AddSingleton<IGitHubRequestAdapter>(_ => new GitHubRequestAdapter(requestAdapter));
-        services.AddSingleton(requestAdapter);
-        services.AddSingleton(sp => new GitHubClient(sp.GetRequiredService<IRequestAdapter>()));
-        services.AddScoped<IGitHubUserService, GitHubUserService>();
-        services.AddScoped<IGitHubRepositoryService, GitHubRepositoryService>();
-        services.AddScoped<IGitHubBranchService, GitHubBranchService>();
-        services.AddScoped<IGitHubFileService, GitHubFileService>();
-        services.AddScoped<IGitHubWorkflowService, GitHubWorkflowService>();
-        services.AddScoped<IGitHubWorkflowRunService, GitHubWorkflowRunService>();
+        RegisterGitHubServices(services, requestAdapter);
         return services;
     }
 
-    /// <summary>Registers authentication, creates an authenticated Kiota adapter, and registers GitHub services.</summary>
+    /// <summary>Registers authentication and the generated GitHub client without introducing a dependency cycle.</summary>
     public static IServiceCollection AddGFlowGitHubAuthenticated(this IServiceCollection services)
     {
         services.AddGFlowGitHubAuthentication();
-        services.AddSingleton(sp =>
-            sp.GetRequiredService<IGitHubRequestAdapterFactory>().Create());
-        services.AddSingleton<IGitHubRequestAdapter>(sp =>
-            new GitHubRequestAdapter(sp.GetRequiredService<IRequestAdapter>()));
-        services.AddSingleton(sp => new GitHubClient(sp.GetRequiredService<IRequestAdapter>()));
-        services.AddScoped<IGitHubUserService, GitHubUserService>();
-        services.AddScoped<IGitHubRepositoryService, GitHubRepositoryService>();
-        services.AddScoped<IGitHubBranchService, GitHubBranchService>();
-        services.AddScoped<IGitHubFileService, GitHubFileService>();
-        services.AddScoped<IGitHubWorkflowService, GitHubWorkflowService>();
-        services.AddScoped<IGitHubWorkflowRunService, GitHubWorkflowRunService>();
+        services.AddSingleton<IRequestAdapter>(sp => sp.GetRequiredService<IGitHubRequestAdapterFactory>().Create());
+        services.AddSingleton<GitHubClient>(sp => new GitHubClient(sp.GetRequiredService<IRequestAdapter>()));
+        services.AddSingleton<IGitHubRequestAdapter>(sp => new GitHubRequestAdapter(sp.GetRequiredService<IRequestAdapter>()));
+        RegisterGitHubServiceContracts(services);
         return services;
     }
 
-    /// <summary>Registers GFlow GitHub authentication and secure credential abstractions.</summary>
+    /// <summary>Registers GitHub authentication and secure credential abstractions.</summary>
     public static IServiceCollection AddGFlowGitHubAuthentication(this IServiceCollection services)
     {
-        services.AddSingleton<GitHubAuthenticationService>();
-        services.AddSingleton<IGitHubCredentialProvider>(sp => sp.GetRequiredService<GitHubAuthenticationService>());
-        services.AddSingleton<IGitHubAuthenticationService>(sp => sp.GetRequiredService<GitHubAuthenticationService>());
+        services.AddSingleton<GitHubSecureCredentialProvider>();
+        services.AddSingleton<IGitHubCredentialProvider>(sp => sp.GetRequiredService<GitHubSecureCredentialProvider>());
+        services.AddScoped<IGitHubAuthenticationService, GitHubAuthenticationService>();
         services.AddSingleton<IGitHubPermissionValidator, GitHubPermissionValidator>();
+        services.AddScoped<IGitHubEffectivePermissionValidator, GitHubEffectivePermissionValidator>();
         services.AddSingleton<GitHubPatAuthenticationProvider>();
         services.AddSingleton<IAuthenticationProvider>(sp => sp.GetRequiredService<GitHubPatAuthenticationProvider>());
         services.AddSingleton<IGitHubRequestAdapterFactory, GitHubRequestAdapterFactory>();
         return services;
+    }
+
+    private static void RegisterGitHubServices(IServiceCollection services, IRequestAdapter requestAdapter)
+    {
+        if (!services.Any(static descriptor => descriptor.ServiceType == typeof(IRequestAdapter)))
+            services.AddSingleton(requestAdapter);
+
+        services.AddSingleton<GitHubClient>(sp => new GitHubClient(sp.GetRequiredService<IRequestAdapter>()));
+        services.AddSingleton<IGitHubRequestAdapter>(sp => new GitHubRequestAdapter(sp.GetRequiredService<IRequestAdapter>()));
+        RegisterGitHubServiceContracts(services);
+    }
+
+    private static void RegisterGitHubServiceContracts(IServiceCollection services)
+    {
+        services.AddScoped<IGitHubUserService, GitHubUserService>();
+        services.AddScoped<IGitHubRepositoryService, GitHubRepositoryService>();
+        services.AddScoped<IGitHubBranchService, GitHubBranchService>();
+        services.AddScoped<IGitHubFileService, GitHubFileService>();
+        services.AddScoped<IGitHubWorkflowService, GitHubWorkflowService>();
+        services.AddScoped<IGitHubWorkflowRunService, GitHubWorkflowRunService>();
     }
 }

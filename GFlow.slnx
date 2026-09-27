@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/GFlow.Application/GFlow.Application.csproj" />
     <Project Path="src/GFlow.Core/GFlow.Core.csproj" />
     <Project Path="src/GFlow.GitHub/GFlow.GitHub.csproj" />
     <Project Path="src/GFlow.Yaml/GFlow.Yaml.csproj" />

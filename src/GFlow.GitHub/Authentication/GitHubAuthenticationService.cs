@@ -7,7 +7,7 @@ namespace GFlow.GitHub.Authentication;
 public sealed class GitHubAuthenticationService(
     ISecureCredentialStore credentialStore,
     IGitHubUserService userService,
-    IGitHubPermissionValidator permissionValidator) : IGitHubAuthenticationService, IGitHubCredentialProvider
+    IGitHubEffectivePermissionValidator effectivePermissionValidator) : IGitHubAuthenticationService
 {
     private GitHubAuthenticationResult _state =
         new(GitHubAuthenticationState.MissingCredential, null, null, []);
@@ -23,36 +23,24 @@ public sealed class GitHubAuthenticationService(
 
         var type = credentialType ?? DetectCredentialType(token);
         var credential = new GitHubCredentialInfo(
-            Guid.NewGuid().ToString("N"),
-            type,
-            label,
-            null,
-            DateTimeOffset.UtcNow);
+            Guid.NewGuid().ToString("N"), type, label, null, DateTimeOffset.UtcNow);
 
         await credentialStore.SaveAsync(
-            GitHubCredentialSecret.Create(credential.Id, token),
-            cancellationToken).ConfigureAwait(false);
-        await credentialStore.SetActiveAsync(credential.Id, cancellationToken).ConfigureAwait(false);
+            GitHubCredentialSecret.Create(credential.Id, token), cancellationToken).ConfigureAwait(false);
 
         try
         {
-            var user = await userService.GetAuthenticatedUserAsync(cancellationToken).ConfigureAwait(false);
-            var account = new GitHubAccount(user.Id, user.Login, user.Name, user.HtmlUrl);
-            var updatedCredential = credential with { Login = user.Login };
+            var result = await ValidateAsync(cancellationToken).ConfigureAwait(false);
+            if (result.State == GitHubAuthenticationState.InvalidCredential)
+            {
+                await credentialStore.RemoveAsync(credential.Id, cancellationToken).ConfigureAwait(false);
+                return result;
+            }
 
-            _state = new GitHubAuthenticationResult(
-                GitHubAuthenticationState.Authenticated,
-                updatedCredential,
-                account,
-                []);
+            if (result.Credential is null)
+                return result with { Credential = credential };
 
-            return _state;
-        }
-        catch (GitHubServiceException ex) when (ex.Category == Contracts.GitHubErrorCategory.Authentication)
-        {
-            await credentialStore.RemoveAsync(credential.Id, cancellationToken).ConfigureAwait(false);
-            _state = new GitHubAuthenticationResult(GitHubAuthenticationState.InvalidCredential, null, null, []);
-            return _state;
+            return result;
         }
         catch
         {
@@ -76,7 +64,6 @@ public sealed class GitHubAuthenticationService(
         {
             var user = await userService.GetAuthenticatedUserAsync(cancellationToken).ConfigureAwait(false);
             var account = new GitHubAccount(user.Id, user.Login, user.Name, user.HtmlUrl);
-
             var type = DetectCredentialType(secret.Token);
             var credential = _state.Credential?.Id == secret.CredentialId
                 ? _state.Credential
@@ -90,7 +77,7 @@ public sealed class GitHubAuthenticationService(
 
             return _state;
         }
-        catch (GitHubServiceException ex) when (ex.Category == Contracts.GitHubErrorCategory.Authentication)
+        catch (GitHubServiceException ex) when (ex.Category == GitHubErrorCategory.Authentication)
         {
             _state = new GitHubAuthenticationResult(GitHubAuthenticationState.InvalidCredential, null, null, []);
             return _state;
@@ -101,11 +88,40 @@ public sealed class GitHubAuthenticationService(
     public GitHubAuthenticationResult GetCurrentState() => _state;
 
     /// <inheritdoc />
-    public IReadOnlyList<GitHubPermissionResult> ValidatePermissions(
-        GitHubCredentialType credentialType,
-        IReadOnlySet<string> grantedPermissions,
-        IEnumerable<GitHubPermissionRequirement> requirements) =>
-        permissionValidator.Validate(credentialType, grantedPermissions, requirements);
+    public async Task<IReadOnlyList<GitHubPermissionResult>> ValidatePermissionsAsync(
+        string? owner = null,
+        string? repository = null,
+        CancellationToken cancellationToken = default)
+    {
+        var state = await ValidateAsync(cancellationToken).ConfigureAwait(false);
+        if (state.Credential is null)
+            return GitHubPermissionRequirements.ProductLoop
+                .Select(requirement => new GitHubPermissionResult(
+                    requirement.Capability,
+                    false,
+                    state.State == GitHubAuthenticationState.InvalidCredential
+                        ? requirement.ClassicScope
+                        : requirement.FineGrainedPermission,
+                    $"Authentication state is {state.State}.",
+                    true))
+                .ToArray();
+
+        var permissions = await effectivePermissionValidator.ValidateAsync(
+            state.Credential.Type,
+            owner,
+            repository,
+            cancellationToken).ConfigureAwait(false);
+
+        _state = state with
+        {
+            State = permissions.Any(static permission => permission.Verified && !permission.Satisfied)
+                ? GitHubAuthenticationState.InsufficientPermissions
+                : GitHubAuthenticationState.Authenticated,
+            Permissions = permissions
+        };
+
+        return permissions;
+    }
 
     /// <inheritdoc />
     public async Task SignOutAsync(CancellationToken cancellationToken = default)
@@ -116,10 +132,6 @@ public sealed class GitHubAuthenticationService(
 
         _state = new GitHubAuthenticationResult(GitHubAuthenticationState.MissingCredential, null, null, []);
     }
-
-    /// <inheritdoc />
-    public Task<GitHubCredentialSecret?> GetActiveAsync(CancellationToken cancellationToken = default) =>
-        credentialStore.GetActiveAsync(cancellationToken);
 
     /// <summary>Detects the PAT generation from GitHub's documented token prefixes.</summary>
     public static GitHubCredentialType DetectCredentialType(string token) =>

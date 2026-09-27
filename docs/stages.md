@@ -272,6 +272,32 @@ Classic PATs and fine-grained PATs are distinct permission models. Classic token
 
 Stage 03 continues to own all GitHub REST operations and error mapping. Stage 04 supplies the authenticated Kiota adapter and validates authentication/permission state for those capabilities.
 
+The low-level Kiota authentication provider depends only on the secure credential provider. The authentication/session service is scoped application orchestration and is not part of the credential-provider dependency graph:
+
+~~~text
+ISecureCredentialStore
+        |
+IGitHubCredentialProvider
+        |
+GitHubPatAuthenticationProvider
+        |
+Kiota IRequestAdapter
+        |
+Generated GitHubClient
+        |
+Stage 03 GitHub services
+
+GitHubAuthenticationService -> ISecureCredentialStore
+                         -> Stage 03 GitHub services
+                         -> effective permission validator
+~~~
+
+This separation prevents the authentication service from being resolved while Kiota is authenticating the request.
+
+Permission validation is evidence-based. The application does not treat a caller-provided set of strings as proof that a PAT has permissions. Stage 04 can exercise safe authenticated Stage 03 operations and record GitHub-derived observations. A capability is marked Verified only when the API operation provides affirmative evidence, Missing when GitHub proves access is unavailable, and Unverified when proving the capability would require a mutating operation or the endpoint is ambiguous (for example, a public repository can be read without the corresponding fine-grained permission).
+
+GitHub's documented mappings are preserved: classic PATs use OAuth scopes, while fine-grained PATs use repository/account permissions. For workflow-file updates, the effective fine-grained requirement is Contents write plus Workflows write; repository creation accepts Repository creation write or Administration write; workflow listing uses Actions read; workflow dispatch uses Actions write. Stage 04 never performs destructive writes merely to test a permission.
+
 ## Exit Criteria
 
 A user can authenticate, the authenticated GitHub user can be resolved, required capabilities are explicitly modeled and validated, the credential is stored only through platform secure storage, and the raw PAT is never exposed through ordinary workflow/project models.
@@ -280,30 +306,73 @@ A user can authenticate, the authenticated GitHub user can be resolved, required
 
 # Stage 05 — Repository and Workflow Management
 
-Stage 05 consumes the authenticated GitHub services provided by Stage 03. It owns repository/workflow management and UI, not credential storage or the GitHub REST implementation.
+Stage 05 consumes the authenticated GitHub services provided by Stage 03 and the authentication/session boundary provided by Stage 04. Repository/workflow state is application state and never contains credential secrets.
 
 ## Objective
 
 Implement:
 
+```text
 GitHub account -> repositories -> repository -> branch -> .github/workflows -> workflow
+```
 
-Support:
+Support repository creation/selection, branch selection, workflow discovery/loading/creation/saving, and the corresponding repository/workflow-management UI.
 
-- repository creation;
-- repository selection;
-- branch selection;
-- workflow creation;
-- existing workflow loading;
-- workflow editing;
-- workflow saving;
-- workflow file creation/update through REST.
+## Application boundary
 
-Handle optimistic concurrency using the current file/blob SHA where required.
+The `GFlow.Application.RepositoryWorkflow` namespace owns the selected account, repository, branch, and workflow editing context. It delegates all GitHub operations to the existing Stage 03 services and uses the Stage 02 YAML parser/serializer for conversion.
+
+The context contains:
+
+- authenticated account metadata;
+- selected repository;
+- selected branch;
+- workflow model;
+- workflow path;
+- branch/ref;
+- current blob SHA;
+- whether the workflow is a new file.
+
+The `Workflow` domain model remains independent of GitHub.
+
+## Repository and branch flow
+
+The application lists and creates repositories through `IGitHubRepositoryService`, selects a repository, discovers branches through `IGitHubBranchService`, and resolves the repository-provided default branch. Branch names such as `main` or `master` are never hard-coded.
+
+## Workflow file boundary
+
+Workflow files are restricted to direct files under `.github/workflows/` with either `.yml` or `.yaml` extensions. Discovery uses the existing `IGitHubWorkflowService` contents-based workflow-file discovery.
+
+Loading uses:
+
+```text
+GitHub file -> YAML parser -> Workflow
+```
+
+The current blob SHA is retained in `WorkflowDocumentState` and is required for an existing-file update.
+
+Saving uses:
+
+```text
+new document      -> create file (no SHA)
+existing document -> update file (current SHA)
+```
+
+The Stage 03 `IGitHubFileService` remains responsible for the actual GitHub write. GitHub conflicts are propagated as the existing `GitHubErrorCategory.Conflict`; Stage 05 does not implement force-overwrite behavior.
+
+## Authentication and errors
+
+Every repository/workflow operation first ensures that the Stage 04 authentication service reports an authenticated state. Missing or invalid authentication is exposed through the existing GitHub error abstraction instead of attempting unauthenticated writes.
+
+Malformed YAML is surfaced through `WorkflowYamlException`. GitHub authentication, authorization, not-found, conflict, validation, rate-limit, server, cancellation, and unknown failures remain represented by `GitHubServiceException`.
+
+## UI boundary
+
+Stage 05 provides the repository, branch, and workflow-management host UI. It intentionally does not implement the visual workflow editor, recursive Action configuration editor, matrix editor, dependency graph editor, or execution experience; those belong to later stages.
 
 ## Exit Criteria
 
-A user can create/select a repository and persist a valid GFlow workflow into .github/workflows/<name>.yml.
+A user can create/select a repository and branch, discover or create a workflow under `.github/workflows/`, load it into the `Workflow` model, and save it back through the authenticated GitHub services. Existing files are updated with their current blob SHA.
 
 ---
 

@@ -16,7 +16,22 @@ public sealed class GitHubUserService(GitHubClient client) : GitHubServiceBase, 
     public async Task<GitHubUserInfo> GetAuthenticatedUserAsync(CancellationToken cancellationToken = default)
     {
         var response = await ExecuteAsync(() => client.User.GetAsUserGetResponseAsync(cancellationToken: cancellationToken));
-        return response?.PrivateUser is null ? new(response?.PublicUser?.Id, response?.PublicUser?.Login, response?.PublicUser?.Name, response?.PublicUser?.HtmlUrl) :
-             new(response?.PrivateUser?.Id, response?.PrivateUser?.Login, response?.PrivateUser?.Name, response?.PrivateUser?.HtmlUrl);
+
+        if (response?.PrivateUser is not null)
+        {
+            return new(
+                response.PrivateUser.Id,
+                response.PrivateUser.Login,
+                response.PrivateUser.Name,
+                response.PrivateUser.HtmlUrl,
+                true);
+        }
+
+        return new(
+            response?.PublicUser?.Id,
+            response?.PublicUser?.Login,
+            response?.PublicUser?.Name,
+            response?.PublicUser?.HtmlUrl,
+            false);
     }
 }

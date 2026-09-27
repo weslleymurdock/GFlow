@@ -23,7 +23,7 @@
         <ApplicationTitle>GFlow</ApplicationTitle>
 
         <!-- App Identifier -->
-        <ApplicationId>com.companyname.gflow</ApplicationId>
+        <ApplicationId>com.remotecodehub.gflow</ApplicationId>
 
         <!-- Versions -->
         <ApplicationDisplayVersion>1.0</ApplicationDisplayVersion>
@@ -38,7 +38,27 @@
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
         <TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
     </PropertyGroup>
+    
+    <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+        <RuntimeIdentifier>android-arm64</RuntimeIdentifier>
+        <RuntimeIdentifiers>$(RuntimeIdentifier);android-arm;android-x86;android-x64</RuntimeIdentifiers>
+    </PropertyGroup>
 
+    <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
+        <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' != 'ios-arm64'">iossimulator-x64</RuntimeIdentifier>
+        <RuntimeIdentifiers Condition="'$(RuntimeIdentifier)' != 'ios-arm64'">$(RuntimeIdentifier);iossimulator-arm64</RuntimeIdentifiers>
+    </PropertyGroup>
+ 
+    <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst'">
+        <RuntimeIdentifier>maccatalyst-x64</RuntimeIdentifier>
+        <RuntimeIdentifiers>$(RuntimeIdentifier);maccatalyst-arm64</RuntimeIdentifiers>
+    </PropertyGroup>
+ 
+    <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <RuntimeIdentifiers>$(RuntimeIdentifier);win-arm64</RuntimeIdentifiers>
+    </PropertyGroup>
+        
     <ItemGroup>
         <!-- App Icon -->
         <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
@@ -65,6 +85,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\GFlow.Application\GFlow.Application.csproj" />
       <ProjectReference Include="..\GFlow.Core\GFlow.Core.csproj" />
       <ProjectReference Include="..\GFlow.GitHub\GFlow.GitHub.csproj" />
     </ItemGroup>

@@ -1,4 +1,5 @@
-﻿using GFlow.GitHub;
+﻿using GFlow.Application.RepositoryWorkflow;
+using GFlow.GitHub;
 using GFlow.GitHub.Authentication;
 using GFlow.Infrastructure.Security;
 using Microsoft.Extensions.Logging;
@@ -22,6 +23,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ISecureStorage>(SecureStorage.Default);
 		builder.Services.AddSingleton<ISecureCredentialStore, MauiSecureCredentialStore>();
 		builder.Services.AddGFlowGitHubAuthenticated();
+		builder.Services.AddRepositoryWorkflowManagement();
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();

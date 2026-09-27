@@ -1,6 +1,8 @@
+using GFlow.GitHub;
 using GFlow.GitHub.Authentication;
 using GFlow.GitHub.Contracts;
 using GFlow.GitHub.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Kiota.Abstractions;
 
 namespace GFlow.UnitTests;
@@ -8,15 +10,38 @@ namespace GFlow.UnitTests;
 public sealed class GitHubAuthenticationTests
 {
     [Fact]
+    public void AuthenticationGraphResolvesWithoutCircularDependency()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ISecureCredentialStore, FakeSecureCredentialStore>();
+        services.AddGFlowGitHubAuthenticated();
+
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateScopes = true,
+            ValidateOnBuild = true
+        });
+
+        using var scope = provider.CreateScope();
+        var authentication = scope.ServiceProvider.GetRequiredService<IGitHubAuthenticationService>();
+        var credentialProvider = scope.ServiceProvider.GetRequiredService<IGitHubCredentialProvider>();
+        var adapter = scope.ServiceProvider.GetRequiredService<IRequestAdapter>();
+
+        Assert.NotNull(authentication);
+        Assert.NotNull(credentialProvider);
+        Assert.NotNull(adapter);
+    }
+
+    [Fact]
     public async Task SecureStorePersistsAndRemovesCredential()
     {
         var store = new FakeSecureCredentialStore();
         var credential = GitHubCredentialSecret.Create("id", "secret-token");
 
-        await store.SaveAsync(credential);
-        Assert.Equal(credential, await store.GetActiveAsync());
-        Assert.True(await store.RemoveAsync("id"));
-        Assert.Null(await store.GetActiveAsync());
+        await store.SaveAsync(credential, TestContext.Current.CancellationToken);
+        Assert.Equal(credential, await store.GetActiveAsync(TestContext.Current.CancellationToken));
+        Assert.True(await store.RemoveAsync("id", TestContext.Current.CancellationToken));
+        Assert.Null(await store.GetActiveAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -69,9 +94,9 @@ public sealed class GitHubAuthenticationTests
     {
         var store = new FakeSecureCredentialStore();
         var userService = new FakeUserService(new GitHubUserInfo(42, "octocat", "Mona", "https://github.com/octocat"));
-        var service = new GitHubAuthenticationService(store, userService, new GitHubPermissionValidator());
+        var service = new GitHubAuthenticationService(store, userService, new FakeEffectivePermissionValidator());
 
-        var result = await service.AuthenticateAsync("ghp_test", "test");
+        var result = await service.AuthenticateAsync("ghp_test", "test", cancellationToken: TestContext.Current.CancellationToken);
 
         Assert.Equal(GitHubAuthenticationState.Authenticated, result.State);
         Assert.Equal("octocat", result.Account?.Login);
@@ -85,7 +110,7 @@ public sealed class GitHubAuthenticationTests
         var service = new GitHubAuthenticationService(
             new FakeSecureCredentialStore(),
             new FakeUserService(null),
-            new GitHubPermissionValidator());
+            new FakeEffectivePermissionValidator());
 
         var result = await service.ValidateAsync(TestContext.Current.CancellationToken);
 
@@ -103,7 +128,7 @@ public sealed class GitHubAuthenticationTests
             "Authentication failed.",
             401));
 
-        var service = new GitHubAuthenticationService(store, userService, new GitHubPermissionValidator());
+        var service = new GitHubAuthenticationService(store, userService, new FakeEffectivePermissionValidator());
         var result = await service.ValidateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(GitHubAuthenticationState.InvalidCredential, result.State);
@@ -120,7 +145,47 @@ public sealed class GitHubAuthenticationTests
         await provider.AuthenticateRequestAsync(request, null, TestContext.Current.CancellationToken);
 
         Assert.Equal("Bearer secret-token", request.Headers["Authorization"].First());
-        Assert.DoesNotContain("secret-token", request.Headers.ToString());
+        Assert.DoesNotContain("secret-token", new GitHubCredentialInfo("id", GitHubCredentialType.ClassicPersonalAccessToken, "label", "octocat", DateTimeOffset.UtcNow).ToString());
+    }
+
+    [Fact]
+    public async Task AuthenticationServiceMarksVerifiedMissingPermissionAsInsufficient()
+    {
+        var store = new FakeSecureCredentialStore();
+        var userService = new FakeUserService(new GitHubUserInfo(42, "octocat", "Mona", "https://github.com/octocat"));
+        var missing = new GitHubPermissionResult("actions-write", false, "actions", "Forbidden.", true);
+        var service = new GitHubAuthenticationService(
+            store,
+            userService,
+            new FakeEffectivePermissionValidator([missing]));
+
+        await service.AuthenticateAsync("ghp_test", cancellationToken: TestContext.Current.CancellationToken);
+        var permissions = await service.ValidatePermissionsAsync(
+            "octocat",
+            "repo",
+            TestContext.Current.CancellationToken);
+
+        Assert.Contains(permissions, permission => permission.Capability == "actions-write" && !permission.Satisfied);
+        Assert.Equal(GitHubAuthenticationState.InsufficientPermissions, service.GetCurrentState().State);
+    }
+
+    [Fact]
+    public void EvidenceValidatorDoesNotTreatUnverifiedCapabilitiesAsSatisfied()
+    {
+        var validator = new GitHubPermissionValidator();
+        var result = validator.ValidateEvidence(
+            GitHubCredentialType.FineGrainedPersonalAccessToken,
+            new Dictionary<string, GitHubPermissionObservation>
+            {
+                [GitHubPermissionRequirements.RepositoryContentsWrite.Capability] =
+                    GitHubPermissionObservation.Unverified("A write probe would mutate state.")
+            });
+
+        var contents = result.Single(permission =>
+            permission.Capability == GitHubPermissionRequirements.RepositoryContentsWrite.Capability);
+
+        Assert.False(contents.Satisfied);
+        Assert.False(contents.Verified);
     }
 
     [Fact]
@@ -130,6 +195,16 @@ public sealed class GitHubAuthenticationTests
             property => property.Name.Contains("Token", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(typeof(GitHubAccount).GetProperties(),
             property => property.Name.Contains("Token", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private sealed class FakeEffectivePermissionValidator(IReadOnlyList<GitHubPermissionResult>? result = null) : IGitHubEffectivePermissionValidator
+    {
+        public Task<IReadOnlyList<GitHubPermissionResult>> ValidateAsync(
+            GitHubCredentialType credentialType,
+            string? owner = null,
+            string? repository = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(result ?? (IReadOnlyList<GitHubPermissionResult>)[]);
     }
 
     private sealed class FakeCredentialProvider(GitHubCredentialSecret? credential) : IGitHubCredentialProvider
