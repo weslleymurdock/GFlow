@@ -1,12 +1,36 @@
 using GFlow.GitHub.Authentication;
 using GFlow.GitHub.Contracts;
 using GFlow.GitHub.Services;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Kiota.Abstractions;
 
 namespace GFlow.UnitTests;
 
 public sealed class GitHubAuthenticationTests
 {
+    [Fact]
+    public void AuthenticationGraphResolvesWithoutCircularDependency()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<ISecureCredentialStore, FakeSecureCredentialStore>();
+        services.AddGFlowGitHubAuthenticated();
+
+        using var provider = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateScopes = true,
+            ValidateOnBuild = true
+        });
+
+        using var scope = provider.CreateScope();
+        var authentication = scope.ServiceProvider.GetRequiredService<IGitHubAuthenticationService>();
+        var credentialProvider = scope.ServiceProvider.GetRequiredService<IGitHubCredentialProvider>();
+        var adapter = scope.ServiceProvider.GetRequiredService<IRequestAdapter>();
+
+        Assert.NotNull(authentication);
+        Assert.NotNull(credentialProvider);
+        Assert.NotNull(adapter);
+    }
+
     [Fact]
     public async Task SecureStorePersistsAndRemovesCredential()
     {
