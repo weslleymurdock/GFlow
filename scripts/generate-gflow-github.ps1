@@ -186,9 +186,9 @@ function Get-GitHubClient {
     dotnet tool run kiota generate `
         --language CSharp `
         --openapi $OpenApiPath `
-        --output $GeneratedPath `
+        --output $ProjectPath `
         --class-name GitHubClient `
-        --namespace-name GFlow.GitHub.Generated `
+        --namespace-name GFlow.GitHub `
         --clean-output
 
     if ($LASTEXITCODE -ne 0) {
@@ -213,7 +213,7 @@ try {
     Write-Host
     Write-Host "OpenAPI:  $($selectedVersion.Version)"
     Write-Host "Source:   $openApiPath"
-    Write-Host "Output:   $GeneratedPath"
+    Write-Host "Output:   $ProjectPath"
 }
 catch {
     try {
