@@ -109,6 +109,12 @@ public interface IGitHubAuthenticationService
     /// <summary>Gets the current authentication result without performing network validation.</summary>
     GitHubAuthenticationResult GetCurrentState();
 
+    /// <summary>Validates explicit permission evidence against GFlow capability requirements.</summary>
+    IReadOnlyList<GitHubPermissionResult> ValidatePermissions(
+        GitHubCredentialType credentialType,
+        IReadOnlySet<string> grantedPermissions,
+        IEnumerable<GitHubPermissionRequirement> requirements);
+
     /// <summary>Removes the active credential and clears the authentication session.</summary>
     Task SignOutAsync(CancellationToken cancellationToken = default);
 }
