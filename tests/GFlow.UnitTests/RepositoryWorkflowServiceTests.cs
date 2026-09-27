@@ -172,7 +172,7 @@ public sealed class RepositoryWorkflowServiceTests
     }
 
     [Fact]
-    public async Task CancellationIsPropagated()
+    public async Task PropagatesTestCancellationToken()
     {
         var fakes = Create();
         fakes.Repositories.ExpectedCancellation = TestContext.Current.CancellationToken;
@@ -209,7 +209,7 @@ public sealed class RepositoryWorkflowServiceTests
             new FakeParser(),
             new FakeSerializer(),
             new RepositoryWorkflowContext());
-        return new Fakes(service, repositories, files, new FakeParser(files), new FakeSerializer());
+        return new Fakes(service, repositories, files, new FakeParser(), new FakeSerializer());
     }
 
     private sealed record Fakes(IRepositoryWorkflowService Service, FakeRepositories Repositories, FakeFiles Files, FakeParser Parser, FakeSerializer Serializer);
