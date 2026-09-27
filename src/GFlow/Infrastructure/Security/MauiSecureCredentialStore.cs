@@ -1,4 +1,3 @@
-using System.Text.Json;
 using GFlow.GitHub.Authentication;
 using Microsoft.Maui.Storage;
 
@@ -16,8 +15,7 @@ public sealed class MauiSecureCredentialStore(ISecureStorage secureStorage) : IS
         ArgumentNullException.ThrowIfNull(credential);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var payload = JsonSerializer.Serialize(new StoredCredential(credential.CredentialId, credential.Token));
-        await secureStorage.SetAsync(CredentialPrefix + credential.CredentialId, payload).ConfigureAwait(false);
+        await secureStorage.SetAsync(CredentialPrefix + credential.CredentialId, credential.Token).ConfigureAwait(false);
         await secureStorage.SetAsync(ActiveCredentialKey, credential.CredentialId).ConfigureAwait(false);
     }
 
@@ -30,12 +28,8 @@ public sealed class MauiSecureCredentialStore(ISecureStorage secureStorage) : IS
         if (string.IsNullOrWhiteSpace(id))
             return null;
 
-        var payload = await secureStorage.GetAsync(CredentialPrefix + id).ConfigureAwait(false);
-        if (string.IsNullOrWhiteSpace(payload))
-            return null;
-
-        var stored = JsonSerializer.Deserialize<StoredCredential>(payload);
-        return stored is null ? null : GitHubCredentialSecret.Create(stored.Id, stored.Token);
+        var token = await secureStorage.GetAsync(CredentialPrefix + id).ConfigureAwait(false);
+        return string.IsNullOrWhiteSpace(token) ? null : GitHubCredentialSecret.Create(id, token);
     }
 
     /// <inheritdoc />
@@ -60,6 +54,4 @@ public sealed class MauiSecureCredentialStore(ISecureStorage secureStorage) : IS
         cancellationToken.ThrowIfCancellationRequested();
         await secureStorage.SetAsync(ActiveCredentialKey, credentialId).ConfigureAwait(false);
     }
-
-    private sealed record StoredCredential(string Id, string Token);
 }
