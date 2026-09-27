@@ -15,10 +15,11 @@ public sealed partial class RepositoryWorkflowService(
     IGitHubFileService files,
     IGitHubWorkflowService workflows,
     IWorkflowYamlParser parser,
-    IWorkflowYamlSerializer serializer) : IRepositoryWorkflowService
+    IWorkflowYamlSerializer serializer,
+    RepositoryWorkflowContext context) : IRepositoryWorkflowService
 {
     /// <inheritdoc />
-    public RepositoryWorkflowContext Context { get; } = new();
+    public RepositoryWorkflowContext Context { get; } = context;
 
     /// <inheritdoc />
     public async Task<GitHubAuthenticationResult> EnsureAuthenticatedAsync(CancellationToken cancellationToken = default)
