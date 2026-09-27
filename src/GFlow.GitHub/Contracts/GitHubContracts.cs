@@ -1,7 +1,12 @@
 namespace GFlow.GitHub.Contracts;
 
 /// <summary>Represents authenticated GitHub user information exposed by GFlow.</summary>
-public sealed record GitHubUserInfo(long? Id, string? Login, string? Name, string? HtmlUrl);
+public sealed record GitHubUserInfo(
+    long? Id,
+    string? Login,
+    string? Name,
+    string? HtmlUrl,
+    bool HasPrivateUserData = false);
 
 /// <summary>Represents the repository information required by GFlow.</summary>
 public sealed record GitHubRepositoryInfo(long? Id, string? Name, string? FullName, bool? IsPrivate, string? DefaultBranch, string? HtmlUrl)
