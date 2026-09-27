@@ -70,7 +70,7 @@ public sealed class GitHubWorkflowService(GitHubClient client, IGitHubFileServic
         if (result?.ContentFile is not null)
             return [MapFile(result.ContentFile)];
 
-        var entries = result?.ContentDirectory ?? [];
+        var entries = result?.WithPathGetResponseMember1 ?? [];
         var workflowFiles = entries
             .Where(entry => string.Equals(entry.Type?.ToString(), "File", StringComparison.OrdinalIgnoreCase)
                 && (entry.Name?.EndsWith(".yml", StringComparison.OrdinalIgnoreCase) == true
