@@ -23,7 +23,7 @@ public sealed class RepositoryWorkflowServiceTests
     public async Task CreatesAndSelectsRepository()
     {
         var fakes = Create();
-        var result = await fakes.Service.CreateRepositoryAsync(new("created"));
+        var result = await fakes.Service.CreateRepositoryAsync(new("created"), TestContext.Current.CancellationToken);
         Assert.Equal("owner/created", result.FullName);
         Assert.Same(result, fakes.Service.Context.Repository);
     }
@@ -32,8 +32,8 @@ public sealed class RepositoryWorkflowServiceTests
     public async Task ResolvesDefaultBranchWithoutHardCoding()
     {
         var fakes = Create();
-        await fakes.Service.SelectRepositoryAsync("owner", "repo");
-        var branch = await fakes.Service.SelectDefaultBranchAsync();
+        await fakes.Service.SelectRepositoryAsync("owner", "repo", TestContext.Current.CancellationToken);
+        var branch = await fakes.Service.SelectDefaultBranchAsync(TestContext.Current.CancellationToken);
         Assert.Equal("trunk", branch.Name);
     }
 
@@ -42,7 +42,7 @@ public sealed class RepositoryWorkflowServiceTests
     {
         var fakes = Create();
         await fakes.Service.SelectRepositoryAsync("owner", "repo");
-        var branch = await fakes.Service.SelectBranchAsync("feature/test");
+        var branch = await fakes.Service.SelectBranchAsync("feature/test", TestContext.Current.CancellationToken);
         Assert.Equal("feature/test", branch.Name);
         Assert.Same(branch, fakes.Service.Context.Branch);
     }
@@ -52,8 +52,8 @@ public sealed class RepositoryWorkflowServiceTests
     {
         var fakes = Create();
         await fakes.Service.SelectRepositoryAsync("owner", "repo");
-        await fakes.Service.SelectBranchAsync("trunk");
-        var files = await fakes.Service.DiscoverWorkflowsAsync();
+        await fakes.Service.SelectBranchAsync("trunk", TestContext.Current.CancellationToken);
+        var files = await fakes.Service.DiscoverWorkflowsAsync(TestContext.Current.CancellationToken);
         Assert.Equal(2, files.Count);
         Assert.Contains(files, file => file.Path.EndsWith(".yml", StringComparison.OrdinalIgnoreCase));
         Assert.Contains(files, file => file.Path.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase));
@@ -65,7 +65,7 @@ public sealed class RepositoryWorkflowServiceTests
         var fakes = Create();
         await fakes.Service.SelectRepositoryAsync("owner", "repo");
         await fakes.Service.SelectBranchAsync("trunk");
-        var document = await fakes.Service.LoadWorkflowAsync(".github/workflows/build.yaml");
+        var document = await fakes.Service.LoadWorkflowAsync(".github/workflows/build.yaml", TestContext.Current.CancellationToken);
         Assert.False(document.IsNew);
         Assert.Equal("blob-123", document.BlobSha);
         Assert.Equal("build", document.Model.Name);
@@ -100,7 +100,7 @@ public sealed class RepositoryWorkflowServiceTests
         await fakes.Service.SelectRepositoryAsync("owner", "repo");
         await fakes.Service.SelectBranchAsync("trunk");
         var document = fakes.Service.CreateWorkflow("new");
-        await fakes.Service.SaveWorkflowAsync(document);
+        await fakes.Service.SaveWorkflowAsync(document, TestContext.Current.CancellationToken);
         Assert.Null(fakes.Files.LastWrite.Sha);
         Assert.Equal("name: build", fakes.Files.LastWrite.Content);
     }
@@ -111,7 +111,7 @@ public sealed class RepositoryWorkflowServiceTests
         var fakes = Create();
         await fakes.Service.SelectRepositoryAsync("owner", "repo");
         await fakes.Service.SelectBranchAsync("trunk");
-        var document = await fakes.Service.LoadWorkflowAsync(".github/workflows/build.yml");
+        var document = await fakes.Service.LoadWorkflowAsync(".github/workflows/build.yml", TestContext.Current.CancellationToken);
         await fakes.Service.SaveWorkflowAsync(document);
         Assert.Equal("blob-123", fakes.Files.LastWrite.Sha);
     }
@@ -148,7 +148,7 @@ public sealed class RepositoryWorkflowServiceTests
         fakes.Files.GetException = new GitHubServiceException(GitHubErrorCategory.NotFound, "missing", 404);
         await fakes.Service.SelectRepositoryAsync("owner", "repo");
         await fakes.Service.SelectBranchAsync("trunk");
-        var exception = await Assert.ThrowsAsync<GitHubServiceException>(() => fakes.Service.LoadWorkflowAsync(".github/workflows/missing.yml"));
+        var exception = await Assert.ThrowsAsync<GitHubServiceException>(() => fakes.Service.LoadWorkflowAsync(".github/workflows/missing.yml", TestContext.Current.CancellationToken));
         Assert.Equal(GitHubErrorCategory.NotFound, exception.Category);
     }
 
@@ -166,7 +166,7 @@ public sealed class RepositoryWorkflowServiceTests
     public async Task AuthenticationRequiredStatePreventsRepositoryAccess()
     {
         var fakes = Create(GitHubAuthenticationState.MissingCredential);
-        var exception = await Assert.ThrowsAsync<GitHubServiceException>(() => fakes.Service.ListRepositoriesAsync());
+        var exception = await Assert.ThrowsAsync<GitHubServiceException>(() => fakes.Service.ListRepositoriesAsync(TestContext.Current.CancellationToken));
         Assert.Equal(GitHubErrorCategory.Authorization, exception.Category);
         Assert.Equal(0, fakes.Repositories.ListCalls);
     }
@@ -175,11 +175,12 @@ public sealed class RepositoryWorkflowServiceTests
     public async Task CancellationIsPropagated()
     {
         var fakes = Create();
-        fakes.Repositories.ListCancellation = TestContext.Current.CancellationToken;
+        fakes.Repositories.ExpectedCancellation = TestContext.Current.CancellationToken;
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        var exception = await Assert.ThrowsAnyAsync<OperationCanceledException>(() => fakes.Service.ListRepositoriesAsync(cts.Token));
-        Assert.NotNull(exception);
+        fakes.Repositories.ExpectedCancellation = TestContext.Current.CancellationToken;
+        await fakes.Service.ListRepositoriesAsync(TestContext.Current.CancellationToken);
+        Assert.Equal(TestContext.Current.CancellationToken, fakes.Repositories.ReceivedCancellation);
     }
 
     [Fact]
@@ -208,7 +209,7 @@ public sealed class RepositoryWorkflowServiceTests
             new FakeBranches(),
             files,
             new FakeWorkflows(files),
-            new FakeParser(files),
+            new FakeParser(),
             new FakeSerializer(),
             new RepositoryWorkflowContext());
         return new Fakes(service, repositories, files, new FakeParser(files), new FakeSerializer());
@@ -234,11 +235,13 @@ public sealed class RepositoryWorkflowServiceTests
     private sealed class FakeRepositories : IGitHubRepositoryService
     {
         public int ListCalls { get; private set; }
-        public CancellationToken ListCancellation { private get; set; }
+        public CancellationToken ExpectedCancellation { private get; set; }
+        public CancellationToken ReceivedCancellation { get; private set; }
         public Task<IReadOnlyList<GitHubRepositoryInfo>> ListAsync(int page = 1, int perPage = 100, CancellationToken cancellationToken = default)
         {
             ListCalls++;
-            if (ListCancellation.CanBeCanceled) cancellationToken.ThrowIfCancellationRequested();
+            ReceivedCancellation = cancellationToken;
+            if (ExpectedCancellation.CanBeCanceled) Assert.Equal(ExpectedCancellation, cancellationToken);
             return Task.FromResult<IReadOnlyList<GitHubRepositoryInfo>>([new(1, "repo", "owner/repo", true, "trunk", "url")]);
         }
         public Task<GitHubRepositoryInfo> GetAsync(string owner, string repository, CancellationToken cancellationToken = default) =>
@@ -284,7 +287,7 @@ public sealed class RepositoryWorkflowServiceTests
         public Task<GitHubWorkflowRunInfo?> DispatchAsync(string owner, string repository, GitHubWorkflowDispatchRequest request, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 
-    private sealed class FakeParser(FakeFiles files) : IWorkflowYamlParser
+    private sealed class FakeParser : IWorkflowYamlParser
     {
         public Workflow Parse(string yaml)
         {
