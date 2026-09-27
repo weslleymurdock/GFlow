@@ -3,8 +3,12 @@ using Microsoft.Kiota.Abstractions;
 
 namespace GFlow.GitHub.Services;
 
+/// <summary>Provides common exception mapping and execution helpers for GitHub services.</summary>
 public abstract class GitHubServiceBase
 {
+    /// <summary>Maps a GitHub or transport exception to an application-facing exception.</summary>
+    /// <param name="exception">The exception raised by the GitHub operation.</param>
+    /// <returns>A mapped <see cref="GitHubServiceException"/>.</returns>
     public static GitHubServiceException MapException(Exception exception)
     {
         if (exception is OperationCanceledException)
@@ -35,6 +39,10 @@ public abstract class GitHubServiceBase
         return new GitHubServiceException(GitHubErrorCategory.Unknown, "The GitHub operation failed.", null, exception);
     }
 
+    /// <summary>Executes an asynchronous GitHub operation and maps failures.</summary>
+    /// <typeparam name="T">The operation result type.</typeparam>
+    /// <param name="operation">The asynchronous operation to execute.</param>
+    /// <returns>The operation result.</returns>
     public static async Task<T> ExecuteAsync<T>(Func<Task<T>> operation)
     {
         try
@@ -51,6 +59,8 @@ public abstract class GitHubServiceBase
         }
     }
 
+    /// <summary>Executes an asynchronous GitHub operation that has no result and maps failures.</summary>
+    /// <param name="operation">The asynchronous operation to execute.</param>
     public static async Task ExecuteAsync(Func<Task> operation)
     {
         try
