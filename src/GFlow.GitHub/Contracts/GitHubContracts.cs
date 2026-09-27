@@ -7,7 +7,17 @@ public sealed record GitHubUserInfo(long? Id, string? Login, string? Name, strin
 public sealed record GitHubRepositoryInfo(long? Id, string? Name, string? FullName, bool? IsPrivate, string? DefaultBranch, string? HtmlUrl)
 {
     /// <summary>Gets the repository owner derived from the GitHub full name.</summary>
-    public string? Owner => FullName?.IndexOf('/') is > 0 and var separator ? FullName[..separator] : null;
+    public string? Owner
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(FullName))
+                return null;
+
+            var separator = FullName.IndexOf('/');
+            return separator > 0 ? FullName[..separator] : null;
+        }
+    }
 }
 
 /// <summary>Represents a Git reference exposed by GFlow.</summary>
