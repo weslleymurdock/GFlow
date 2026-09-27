@@ -30,14 +30,31 @@ public sealed record GitHubWorkflowDispatchRequest(string Workflow, string Ref, 
 /// <summary>Defines the supported GitHub service error categories.</summary>
 public enum GitHubErrorCategory
 {
+    /// <summary>Authentication credentials are missing or invalid.</summary>
     Authentication,
+
+    /// <summary>The authenticated identity is not authorized for the operation.</summary>
     Authorization,
+
+    /// <summary>The requested GitHub resource does not exist.</summary>
     NotFound,
+
+    /// <summary>The requested operation conflicts with the current GitHub resource state.</summary>
     Conflict,
+
+    /// <summary>GitHub rejected the request because its data is invalid.</summary>
     Validation,
+
+    /// <summary>The GitHub API rate limit has been exceeded.</summary>
     RateLimit,
+
+    /// <summary>GitHub returned a server-side failure.</summary>
     Server,
+
+    /// <summary>The asynchronous operation was cancelled.</summary>
     Cancellation,
+
+    /// <summary>The failure does not match another supported category.</summary>
     Unknown
 }
 
