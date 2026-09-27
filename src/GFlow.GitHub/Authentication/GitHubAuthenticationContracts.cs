@@ -183,6 +183,11 @@ public interface IGitHubPermissionValidator
         GitHubCredentialType credentialType,
         IReadOnlySet<string> grantedPermissions,
         IEnumerable<GitHubPermissionRequirement> requirements);
+
+    /// <summary>Maps effective permission observations obtained from GitHub API operations.</summary>
+    IReadOnlyList<GitHubPermissionResult> ValidateEvidence(
+        GitHubCredentialType credentialType,
+        IReadOnlyDictionary<string, GitHubPermissionObservation> observations);
 }
 
 /// <summary>Provides permission evidence captured by the GitHub API integration.</summary>
