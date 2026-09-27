@@ -307,6 +307,64 @@ A user can create/select a repository and persist a valid GFlow workflow into .g
 
 ---
 
+# Stage 05 — Repository and Workflow Management
+
+Stage 05 consumes the authenticated GitHub services provided by Stage 03 and the authentication/session boundary provided by Stage 04. Repository/workflow state is application state and never contains credential secrets.
+
+## Application boundary
+
+The `GFlow.Application.RepositoryWorkflow` namespace owns the selected account, repository, branch, and workflow editing context. It delegates all GitHub operations to the existing Stage 03 services and uses the Stage 02 YAML parser/serializer for conversion.
+
+The context contains:
+
+- authenticated account metadata;
+- selected repository;
+- selected branch;
+- workflow model;
+- workflow path;
+- branch/ref;
+- current blob SHA;
+- whether the workflow is a new file.
+
+The `Workflow` domain model remains independent of GitHub.
+
+## Repository and branch flow
+
+The application lists and creates repositories through `IGitHubRepositoryService`, selects a repository, discovers branches through `IGitHubBranchService`, and resolves the repository-provided default branch. Branch names such as `main` or `master` are never hard-coded.
+
+## Workflow file boundary
+
+Workflow files are restricted to direct files under `.github/workflows/` with either `.yml` or `.yaml` extensions. Discovery uses the existing `IGitHubWorkflowService` contents-based workflow-file discovery.
+
+Loading uses:
+
+```text
+GitHub file -> YAML parser -> Workflow
+```
+
+The current blob SHA is retained in `WorkflowDocumentState` and is required for an existing-file update.
+
+Saving uses:
+
+```text
+new document      -> create file (no SHA)
+existing document -> update file (current SHA)
+```
+
+The Stage 03 `IGitHubFileService` remains responsible for the actual GitHub write. GitHub conflicts are propagated as the existing `GitHubErrorCategory.Conflict`; Stage 05 does not implement force-overwrite behavior.
+
+## Authentication and errors
+
+Every repository/workflow operation first ensures that the Stage 04 authentication service reports an authenticated state. Missing or invalid authentication is exposed through the existing GitHub error abstraction instead of attempting unauthenticated writes.
+
+Malformed YAML is surfaced through `WorkflowYamlException`. GitHub authentication, authorization, not-found, conflict, validation, rate-limit, server, cancellation, and unknown failures remain represented by `GitHubServiceException`.
+
+## UI boundary
+
+Stage 05 provides the repository, branch, and workflow-management host UI. It intentionally does not implement the visual workflow editor, recursive Action configuration editor, matrix editor, dependency graph editor, or execution experience; those belong to later stages.
+
+---
+
 # Stage 06 — Action Index and Action Metadata
 
 ## Objective
