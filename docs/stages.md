@@ -272,6 +272,32 @@ Classic PATs and fine-grained PATs are distinct permission models. Classic token
 
 Stage 03 continues to own all GitHub REST operations and error mapping. Stage 04 supplies the authenticated Kiota adapter and validates authentication/permission state for those capabilities.
 
+The low-level Kiota authentication provider depends only on the secure credential provider. The authentication/session service is scoped application orchestration and is not part of the credential-provider dependency graph:
+
+~~~text
+ISecureCredentialStore
+        |
+IGitHubCredentialProvider
+        |
+GitHubPatAuthenticationProvider
+        |
+Kiota IRequestAdapter
+        |
+Generated GitHubClient
+        |
+Stage 03 GitHub services
+
+GitHubAuthenticationService -> ISecureCredentialStore
+                         -> Stage 03 GitHub services
+                         -> effective permission validator
+~~~
+
+This separation prevents the authentication service from being resolved while Kiota is authenticating the request.
+
+Permission validation is evidence-based. The application does not treat a caller-provided set of strings as proof that a PAT has permissions. Stage 04 can exercise safe authenticated Stage 03 operations and record GitHub-derived observations. A capability is marked Verified only when the API operation provides affirmative evidence, Missing when GitHub proves access is unavailable, and Unverified when proving the capability would require a mutating operation or the endpoint is ambiguous (for example, a public repository can be read without the corresponding fine-grained permission).
+
+GitHub's documented mappings are preserved: classic PATs use OAuth scopes, while fine-grained PATs use repository/account permissions. For workflow-file updates, the effective fine-grained requirement is Contents write plus Workflows write; repository creation accepts Repository creation write or Administration write; workflow listing uses Actions read; workflow dispatch uses Actions write. Stage 04 never performs destructive writes merely to test a permission.
+
 ## Exit Criteria
 
 A user can authenticate, the authenticated GitHub user can be resolved, required capabilities are explicitly modeled and validated, the credential is stored only through platform secure storage, and the raw PAT is never exposed through ordinary workflow/project models.
