@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/GFlow.Core/GFlow.Core.csproj" />
+    <ProjectReference Include="../../src/GFlow.Yaml/GFlow.Yaml.csproj" />
   </ItemGroup>
 
 </Project>
