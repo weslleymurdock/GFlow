@@ -31,6 +31,12 @@ public sealed class GitHubAuthenticationService(
         try
         {
             var result = await ValidateAsync(cancellationToken).ConfigureAwait(false);
+            if (result.State == GitHubAuthenticationState.InvalidCredential)
+            {
+                await credentialStore.RemoveAsync(credential.Id, cancellationToken).ConfigureAwait(false);
+                return result;
+            }
+
             if (result.Credential is null)
                 return result with { Credential = credential };
 
