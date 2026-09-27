@@ -62,5 +62,9 @@ public sealed class YamlMapping : YamlValue, IReadOnlyDictionary<string, YamlVal
         decimal number => new YamlScalar(number),
         _ => throw new ArgumentException($"Unsupported YAML scalar type: {value.GetType().FullName}.", nameof(value))
     };
-}
 
+    /// <summary>Determines whether the mapping contains the specified key.</summary>
+    /// <param name="key">The key to locate in the mapping.</param>
+    /// <returns><see langword="true"/> when the key exists; otherwise, <see langword="false"/>.</returns>
+    public bool ContainsKey(string key) => _values.ContainsKey(key);
+}
