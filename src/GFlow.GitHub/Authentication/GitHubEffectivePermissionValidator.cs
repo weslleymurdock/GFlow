@@ -57,7 +57,7 @@ public sealed class GitHubEffectivePermissionValidator(
                         GitHubPermissionObservation.Verified("GET /repos/{owner}/{repo}/actions/workflows succeeded.");
 
                     observations[GitHubPermissionRequirements.RepositoryContentsRead.Capability] =
-                        repo.Private
+                        repo.IsPrivate == true
                             ? GitHubPermissionObservation.Verified("Authenticated access to a private repository's workflow contents succeeded.")
                             : GitHubPermissionObservation.Unverified("The selected repository is public, so successful reads do not prove Contents permission.");
                 }
