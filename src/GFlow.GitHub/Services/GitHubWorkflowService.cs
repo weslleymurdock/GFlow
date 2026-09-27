@@ -20,7 +20,7 @@ public interface IGitHubWorkflowService
 }
 
 /// <inheritdoc />
-public sealed class GitHubWorkflowService(GitHubClient client, IGitHubFileService fileService) : GitHubServiceBase, IGitHubWorkflowService
+public sealed class GitHubWorkflowService(GitHubClient client) : GitHubServiceBase, IGitHubWorkflowService
 {
     /// <inheritdoc />
     public async Task<IReadOnlyList<GitHubWorkflowInfo>> ListAsync(string owner, string repository, int page = 1, int perPage = 100, CancellationToken cancellationToken = default)
