@@ -22,7 +22,7 @@ jobs:
       uses: actions/setup-dotnet@v6
       with:
         global-json-file: global.json
-        workloads: maui blazorwasm 
+        workloads: maui-windows maccatalyst ios android wasm-tools 
 
     - name: Restore tools
       run: dotnet tool restore 
