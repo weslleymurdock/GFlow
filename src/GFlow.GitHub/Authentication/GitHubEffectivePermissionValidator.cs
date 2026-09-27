@@ -32,9 +32,13 @@ public sealed class GitHubEffectivePermissionValidator(
 
         try
         {
-            await userService.GetAuthenticatedUserAsync(cancellationToken).ConfigureAwait(false);
+            var user = await userService.GetAuthenticatedUserAsync(cancellationToken).ConfigureAwait(false);
             observations[GitHubPermissionRequirements.AuthenticatedUser.Capability] =
-                GitHubPermissionObservation.Verified("GET /user succeeded with the active credential.");
+                credentialType == GitHubCredentialType.ClassicPersonalAccessToken
+                    ? user.HasPrivateUserData
+                        ? GitHubPermissionObservation.Verified("GET /user returned the private-user representation, proving read:user or user scope.")
+                        : GitHubPermissionObservation.Missing("GET /user returned only the public-user representation; read:user or user scope was not effective.")
+                    : GitHubPermissionObservation.Verified("GET /user succeeded; fine-grained PATs require no permission for this endpoint.");
         }
         catch (GitHubServiceException ex) when (ex.Category is GitHubErrorCategory.Authorization or GitHubErrorCategory.Authentication)
         {
