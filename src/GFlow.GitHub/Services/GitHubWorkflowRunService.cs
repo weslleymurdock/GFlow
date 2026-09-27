@@ -39,7 +39,11 @@ public sealed class GitHubWorkflowRunService(GitHubClient client) : GitHubServic
             config.QueryParameters.Page = page;
             config.QueryParameters.PerPage = perPage;
             config.QueryParameters.Branch = branch;
-            config.QueryParameters.Status = status;
+            config.QueryParameters.StatusAsGetStatusQueryParameterType = status is null
+                ? null
+                : Enum.TryParse<global::GFlow.GitHub.Repos.Item.Item.Actions.Runs.RunsRequestBuilder.GetStatusQueryParameterType>(status, true, out var parsedStatus)
+                    ? parsedStatus
+                    : null;
         }, cancellationToken));
 
         return result?.WorkflowRuns?.Select(Map).ToArray() ?? [];
