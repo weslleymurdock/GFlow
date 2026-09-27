@@ -227,6 +227,8 @@ public sealed class RepositoryWorkflowServiceTests
         public IReadOnlyList<GitHubPermissionResult> ValidatePermissions(GitHubCredentialType credentialType, IReadOnlySet<string> grantedPermissions, IEnumerable<GitHubPermissionRequirement> requirements) => [];
         public Task SignOutAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
         private GitHubAuthenticationResult Result() => new(state, null, state == GitHubAuthenticationState.Authenticated ? new(1, "user", "User", "url") : null, []);
+        public Task<IReadOnlyList<GitHubPermissionResult>> ValidatePermissionsAsync(string? owner = null, string? repository = null, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<GitHubPermissionResult>>([]);
+
     }
 
     private sealed class FakeRepositories : IGitHubRepositoryService

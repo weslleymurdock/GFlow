@@ -1,3 +1,4 @@
+using GFlow.GitHub;
 using GFlow.GitHub.Authentication;
 using GFlow.GitHub.Contracts;
 using GFlow.GitHub.Services;
