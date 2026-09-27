@@ -25,9 +25,9 @@ public abstract class YamlValue
     public static YamlMapping Mapping(IEnumerable<KeyValuePair<string, YamlValue>> values) => new(values);
 
     /// <summary>Creates an empty YAML sequence.</summary>
-    public static YamlSequence Sequence() => new();
+    public static YamlSequence Sequence() => [];
 
     /// <summary>Creates a YAML sequence from values.</summary>
-    public static YamlSequence Sequence(IEnumerable<YamlValue> values) => new(values);
+    public static YamlSequence Sequence(IEnumerable<YamlValue> values) => [.. values];
 }
 
