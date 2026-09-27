@@ -22,6 +22,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ISecureStorage>(SecureStorage.Default);
 		builder.Services.AddSingleton<ISecureCredentialStore, MauiSecureCredentialStore>();
 		builder.Services.AddGFlowGitHubAuthenticated();
+		builder.Services.AddRepositoryWorkflowManagement();
 
 #if DEBUG
 		builder.Services.AddBlazorWebViewDeveloperTools();
