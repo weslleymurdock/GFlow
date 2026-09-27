@@ -7,7 +7,8 @@ namespace GFlow.GitHub.Authentication;
 public sealed class GitHubAuthenticationService(
     ISecureCredentialStore credentialStore,
     IGitHubUserService userService,
-    IGitHubPermissionValidator permissionValidator) : IGitHubAuthenticationService
+    IGitHubPermissionValidator permissionValidator,
+    IGitHubEffectivePermissionValidator effectivePermissionValidator) : IGitHubAuthenticationService
 {
     private GitHubAuthenticationResult _state =
         new(GitHubAuthenticationState.MissingCredential, null, null, []);
@@ -82,11 +83,40 @@ public sealed class GitHubAuthenticationService(
     public GitHubAuthenticationResult GetCurrentState() => _state;
 
     /// <inheritdoc />
-    public IReadOnlyList<GitHubPermissionResult> ValidatePermissions(
-        GitHubCredentialType credentialType,
-        IReadOnlySet<string> grantedPermissions,
-        IEnumerable<GitHubPermissionRequirement> requirements) =>
-        permissionValidator.Validate(credentialType, grantedPermissions, requirements);
+    public async Task<IReadOnlyList<GitHubPermissionResult>> ValidatePermissionsAsync(
+        string? owner = null,
+        string? repository = null,
+        CancellationToken cancellationToken = default)
+    {
+        var state = await ValidateAsync(cancellationToken).ConfigureAwait(false);
+        if (state.Credential is null)
+            return GitHubPermissionRequirements.ProductLoop
+                .Select(requirement => new GitHubPermissionResult(
+                    requirement.Capability,
+                    false,
+                    state.State == GitHubAuthenticationState.InvalidCredential
+                        ? requirement.ClassicScope
+                        : requirement.FineGrainedPermission,
+                    $"Authentication state is {state.State}.",
+                    true))
+                .ToArray();
+
+        var permissions = await effectivePermissionValidator.ValidateAsync(
+            state.Credential.Type,
+            owner,
+            repository,
+            cancellationToken).ConfigureAwait(false);
+
+        _state = state with
+        {
+            State = permissions.Any(static permission => permission.Verified && !permission.Satisfied)
+                ? GitHubAuthenticationState.InsufficientPermissions
+                : GitHubAuthenticationState.Authenticated,
+            Permissions = permissions
+        };
+
+        return permissions;
+    }
 
     /// <inheritdoc />
     public async Task SignOutAsync(CancellationToken cancellationToken = default)
