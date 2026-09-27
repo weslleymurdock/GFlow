@@ -159,7 +159,7 @@ public sealed class RepositoryWorkflowServiceTests
         fakes.Files.GetContent = "not: [valid";
         await fakes.Service.SelectRepositoryAsync("owner", "repo", TestContext.Current.CancellationToken);
         await fakes.Service.SelectBranchAsync("trunk", TestContext.Current.CancellationToken);
-        await Assert.ThrowsAsync<WorkflowYamlException>(() => fakes.Service.LoadWorkflowAsync(".github/workflows/build.yml"));
+        await Assert.ThrowsAsync<WorkflowYamlException>(() => fakes.Service.LoadWorkflowAsync(".github/workflows/build.yml", TestContext.Current.CancellationToken));
     }
 
     [Fact]
