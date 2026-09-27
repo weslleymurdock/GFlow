@@ -148,6 +148,46 @@ public sealed class GitHubAuthenticationTests
     }
 
     [Fact]
+    public async Task AuthenticationServiceMarksVerifiedMissingPermissionAsInsufficient()
+    {
+        var store = new FakeSecureCredentialStore();
+        var userService = new FakeUserService(new GitHubUserInfo(42, "octocat", "Mona", "https://github.com/octocat"));
+        var missing = new GitHubPermissionResult("actions-write", false, "actions", "Forbidden.", true);
+        var service = new GitHubAuthenticationService(
+            store,
+            userService,
+            new FakeEffectivePermissionValidator([missing]));
+
+        await service.AuthenticateAsync("ghp_test", cancellationToken: TestContext.Current.CancellationToken);
+        var permissions = await service.ValidatePermissionsAsync(
+            "octocat",
+            "repo",
+            TestContext.Current.CancellationToken);
+
+        Assert.Contains(permissions, permission => permission.Capability == "actions-write" && !permission.Satisfied);
+        Assert.Equal(GitHubAuthenticationState.InsufficientPermissions, service.GetCurrentState().State);
+    }
+
+    [Fact]
+    public void EvidenceValidatorDoesNotTreatUnverifiedCapabilitiesAsSatisfied()
+    {
+        var validator = new GitHubPermissionValidator();
+        var result = validator.ValidateEvidence(
+            GitHubCredentialType.FineGrainedPersonalAccessToken,
+            new Dictionary<string, GitHubPermissionObservation>
+            {
+                [GitHubPermissionRequirements.RepositoryContentsWrite.Capability] =
+                    GitHubPermissionObservation.Unverified("A write probe would mutate state.")
+            });
+
+        var contents = result.Single(permission =>
+            permission.Capability == GitHubPermissionRequirements.RepositoryContentsWrite.Capability);
+
+        Assert.False(contents.Satisfied);
+        Assert.False(contents.Verified);
+    }
+
+    [Fact]
     public void OrdinaryAuthenticationModelsContainNoTokenProperty()
     {
         Assert.DoesNotContain(typeof(GitHubCredentialInfo).GetProperties(),
@@ -156,14 +196,14 @@ public sealed class GitHubAuthenticationTests
             property => property.Name.Contains("Token", StringComparison.OrdinalIgnoreCase));
     }
 
-    private sealed class FakeEffectivePermissionValidator : IGitHubEffectivePermissionValidator
+    private sealed class FakeEffectivePermissionValidator(IReadOnlyList<GitHubPermissionResult>? result = null) : IGitHubEffectivePermissionValidator
     {
         public Task<IReadOnlyList<GitHubPermissionResult>> ValidateAsync(
             GitHubCredentialType credentialType,
             string? owner = null,
             string? repository = null,
             CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<GitHubPermissionResult>>([]);
+            Task.FromResult(result ?? (IReadOnlyList<GitHubPermissionResult>)[]);
     }
 
     private sealed class FakeCredentialProvider(GitHubCredentialSecret? credential) : IGitHubCredentialProvider
