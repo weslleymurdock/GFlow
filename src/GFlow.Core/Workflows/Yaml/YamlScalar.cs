@@ -3,10 +3,19 @@ namespace GFlow.Core.Workflows.Yaml;
 /// <summary>Identifies the scalar representation of a YAML value.</summary>
 public enum YamlScalarKind
 {
+    /// <summary>Represents a string scalar.</summary>
     String,
+
+    /// <summary>Represents a Boolean scalar.</summary>
     Boolean,
+
+    /// <summary>Represents an integer scalar.</summary>
     Integer,
+
+    /// <summary>Represents a decimal numeric scalar.</summary>
     Number,
+
+    /// <summary>Represents a null scalar.</summary>
     Null
 }
 
@@ -45,4 +54,3 @@ public sealed class YamlScalar : YamlValue
         ? typed
         : throw new InvalidCastException($"The YAML scalar contains {Value?.GetType().Name ?? "null"}, not {typeof(T).Name}.");
 }
-
