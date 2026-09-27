@@ -4,6 +4,7 @@ using GFlow.Core.Workflows.Yaml;
 using GFlow.GitHub.Authentication;
 using GFlow.GitHub.Contracts;
 using GFlow.GitHub.Services;
+using GFlow.Yaml;
 
 namespace GFlow.UnitTests;
 
@@ -192,6 +193,23 @@ public sealed class RepositoryWorkflowServiceTests
         var parsed = fakes.Parser.Parse(yaml);
         Assert.Equal("roundtrip", parsed.Name);
         Assert.Single(parsed.Jobs);
+    }
+
+
+    [Fact]
+    public void Stage02ConverterPerformsWorkflowYamlRoundTrip()
+    {
+        var converter = new WorkflowYamlConverter();
+        var workflow = new Workflow("roundtrip");
+        workflow.Triggers.Add(new GFlow.Core.Workflows.Trigger("push"));
+        workflow.AddJob(new Job("build") { RunsOn = new GFlow.Core.Workflows.Yaml.YamlScalar("ubuntu-latest") });
+
+        var yaml = converter.Serialize(workflow);
+        var parsed = converter.Parse(yaml);
+
+        Assert.Equal("roundtrip", parsed.Name);
+        Assert.Single(parsed.Jobs);
+        Assert.Equal("build", parsed.Jobs[0].Id);
     }
 
     private static Fakes Create(GitHubAuthenticationState state = GitHubAuthenticationState.Authenticated)
