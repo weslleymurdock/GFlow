@@ -208,7 +208,7 @@ public sealed class RepositoryWorkflowServiceTests
             repositories,
             new FakeBranches(),
             files,
-            new FakeWorkflows(files),
+            new FakeWorkflows(),
             new FakeParser(),
             new FakeSerializer(),
             new RepositoryWorkflowContext());
@@ -235,7 +235,7 @@ public sealed class RepositoryWorkflowServiceTests
     private sealed class FakeRepositories : IGitHubRepositoryService
     {
         public int ListCalls { get; private set; }
-        public CancellationToken ExpectedCancellation { private get; set; }
+        public CancellationToken ExpectedCancellation { get; set; }
         public CancellationToken ReceivedCancellation { get; private set; }
         public Task<IReadOnlyList<GitHubRepositoryInfo>> ListAsync(int page = 1, int perPage = 100, CancellationToken cancellationToken = default)
         {
@@ -275,7 +275,7 @@ public sealed class RepositoryWorkflowServiceTests
         }
     }
 
-    private sealed class FakeWorkflows(FakeFiles files) : IGitHubWorkflowService
+    private sealed class FakeWorkflows : IGitHubWorkflowService
     {
         public Task<IReadOnlyList<GitHubWorkflowInfo>> ListAsync(string owner, string repository, int page = 1, int perPage = 100, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<GitHubWorkflowInfo>>([]);
         public Task<GitHubWorkflowInfo> GetAsync(string owner, string repository, string workflow, CancellationToken cancellationToken = default) => throw new NotImplementedException();
