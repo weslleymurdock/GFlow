@@ -69,7 +69,7 @@ public sealed class GitHubAuthenticationTests
     {
         var store = new FakeSecureCredentialStore();
         var userService = new FakeUserService(new GitHubUserInfo(42, "octocat", "Mona", "https://github.com/octocat"));
-        var service = new GitHubAuthenticationService(store, userService, new GitHubPermissionValidator());
+        var service = new GitHubAuthenticationService(store, userService, new FakeEffectivePermissionValidator());
 
         var result = await service.AuthenticateAsync("ghp_test", "test", cancellationToken: TestContext.Current.CancellationToken);
 
@@ -85,7 +85,7 @@ public sealed class GitHubAuthenticationTests
         var service = new GitHubAuthenticationService(
             new FakeSecureCredentialStore(),
             new FakeUserService(null),
-            new GitHubPermissionValidator());
+            new FakeEffectivePermissionValidator());
 
         var result = await service.ValidateAsync(TestContext.Current.CancellationToken);
 
@@ -103,7 +103,7 @@ public sealed class GitHubAuthenticationTests
             "Authentication failed.",
             401));
 
-        var service = new GitHubAuthenticationService(store, userService, new GitHubPermissionValidator());
+        var service = new GitHubAuthenticationService(store, userService, new FakeEffectivePermissionValidator());
         var result = await service.ValidateAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(GitHubAuthenticationState.InvalidCredential, result.State);
@@ -130,6 +130,16 @@ public sealed class GitHubAuthenticationTests
             property => property.Name.Contains("Token", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(typeof(GitHubAccount).GetProperties(),
             property => property.Name.Contains("Token", StringComparison.OrdinalIgnoreCase));
+    }
+
+    private sealed class FakeEffectivePermissionValidator : IGitHubEffectivePermissionValidator
+    {
+        public Task<IReadOnlyList<GitHubPermissionResult>> ValidateAsync(
+            GitHubCredentialType credentialType,
+            string? owner = null,
+            string? repository = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<GitHubPermissionResult>>([]);
     }
 
     private sealed class FakeCredentialProvider(GitHubCredentialSecret? credential) : IGitHubCredentialProvider
